@@ -1,0 +1,10 @@
+#!/bin/bash
+
+docker stop play9 || true
+docker rm play9 || true
+
+mkdir -p /tmp/play9
+docker run --name play9 -d -p 9999:9999 \
+    --restart=unless-stopped \
+    -v /tmp/play9:/play9 \
+    play9:local
