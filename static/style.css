@@ -1,0 +1,229 @@
+/* Play Nine — Minimalistic golf-themed styling */
+
+:root {
+  --green: #2d5a27;
+  --green-light: #4a7c43;
+  --cream: #f5f0e6;
+  --sand: #e8dfc9;
+  --brown: #5c4033;
+  --white: #ffffff;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: "Segoe UI", system-ui, sans-serif;
+  background: var(--cream);
+  color: var(--brown);
+  min-height: 100vh;
+}
+
+/* Lobby */
+.lobby {
+  max-width: 360px;
+  margin: 0 auto;
+  padding: 2rem;
+  text-align: center;
+}
+
+.lobby h1 {
+  color: var(--green);
+  font-size: 1.75rem;
+  margin-bottom: 0.25rem;
+}
+
+.subtitle {
+  color: var(--green-light);
+  font-size: 0.9rem;
+  margin-bottom: 2rem;
+}
+
+.card-form {
+  background: var(--white);
+  padding: 1.5rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+.card-form label {
+  display: block;
+  text-align: left;
+  font-weight: 600;
+  margin-top: 1rem;
+  margin-bottom: 0.25rem;
+}
+
+.card-form label:first-of-type {
+  margin-top: 0;
+}
+
+.card-form input {
+  width: 100%;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--sand);
+  border-radius: 6px;
+  font-size: 1rem;
+}
+
+.card-form input:focus {
+  outline: none;
+  border-color: var(--green);
+}
+
+.card-form .hint {
+  display: block;
+  font-size: 0.75rem;
+  color: #888;
+  margin-top: 0.25rem;
+  margin-bottom: 0;
+}
+
+.card-form button {
+  width: 100%;
+  margin-top: 1.5rem;
+  padding: 0.75rem;
+  background: var(--green);
+  color: var(--white);
+  border: none;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.card-form button:hover {
+  background: var(--green-light);
+}
+
+.card-form .error {
+  margin-top: 1rem;
+  color: #c00;
+  font-size: 0.9rem;
+}
+
+/* Table / Waiting Room */
+.waiting-room {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.waiting-room header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+}
+
+.waiting-room h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  color: var(--green);
+}
+
+.icon-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.5rem;
+  color: var(--brown);
+  border-radius: 6px;
+}
+
+.icon-btn:hover {
+  background: var(--sand);
+}
+
+#player-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 1.5rem;
+  background: var(--white);
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+#player-list li {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--sand);
+}
+
+#player-list li:last-child {
+  border-bottom: none;
+}
+
+#start-game {
+  width: 100%;
+  padding: 0.75rem;
+  background: var(--green);
+  color: var(--white);
+  border: none;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+#start-game:hover:not(:disabled) {
+  background: var(--green-light);
+}
+
+#start-game:disabled {
+  background: #aaa;
+  cursor: not-allowed;
+}
+
+/* Game section */
+.game-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.game-section {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.game-section h3 {
+  margin: 0 0 1rem;
+  font-size: 1.1rem;
+  color: var(--green);
+}
+
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.card {
+  aspect-ratio: 2/3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--white);
+  border: 1px solid var(--sand);
+  border-radius: 8px;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.card.face-down {
+  background: var(--green-light);
+  color: var(--white);
+}
+
+.card.clickable {
+  cursor: pointer;
+}
+
+.card.clickable:hover {
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
