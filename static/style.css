@@ -12,6 +12,7 @@
   --sand: #e8dfc9;
   --brown: #5c4033;
   --white: #ffffff;
+  --orange-dark: #e07a2e;
 }
 
 * {
@@ -400,6 +401,11 @@ body.player-view-mode #player-layout {
   flex: 1;
 }
 
+.player-view.show-drawn-card .player-view-top {
+  position: relative;
+  z-index: 1000;
+}
+
 .player-view-drawn-card {
   position: absolute;
   top: 0;
@@ -409,7 +415,14 @@ body.player-view-mode #player-layout {
   width: var(--player-card-width);
   height: var(--player-card-height);
   font-size: calc(clamp(0.8rem, 4vw, 1.5rem) + 5pt);
-  z-index: 50;
+  z-index: 1000;
+  background-color: var(--white);
+  border: 1px solid var(--sand);
+}
+.player-view-drawn-card.face-down {
+  background: center/contain no-repeat url('/play9/static/cards/p9back.svg');
+  background-color: var(--green-light);
+  color: transparent;
 }
 
 .player-view-top .player-view-piles {
@@ -466,16 +479,18 @@ body.player-view-mode .player-view-bottom .card-grid .card {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--white);
+  background-color: var(--white);
   border: 1px solid var(--sand);
   border-radius: 8px;
   font-size: 1.25rem;
   font-weight: 600;
+  color: var(--brown);
 }
 
 .card.face-down {
-  background: var(--green-light);
-  color: var(--white);
+  background: center/contain no-repeat url('/play9/static/cards/p9back.svg');
+  background-color: var(--green-light);
+  color: transparent;
 }
 
 .card.clickable {
@@ -508,7 +523,7 @@ body.player-view-mode .player-view-bottom .card-grid .card {
 }
 
 .card.last-affected {
-  box-shadow: inset 0 0 0 2px var(--green);
+  box-shadow: inset 0 0 0 2px var(--orange-dark);
 }
 
 .drag-ghost.card {
@@ -517,6 +532,12 @@ body.player-view-mode .player-view-bottom .card-grid .card {
   transform: rotate(-2deg) scale(2);
   transform-origin: center center;
   color: var(--brown);
+}
+
+.drag-ghost.card.face-down {
+  background: center/contain no-repeat url('/play9/static/cards/p9back.svg');
+  background-color: var(--green-light);
+  color: transparent;
 }
 
 .draggable-source {
@@ -563,18 +584,26 @@ body.player-view-mode .player-view-bottom .card-grid .card {
   font-family: var(--theme-font);
 }
 
-/* Draw pile: always face-down (green card back) in all views */
+/* Draw pile: always face-down (card back SVG) in all views */
 .pile-stack.draw-pile .pile-card:not(.pile-placeholder) {
-  background: var(--green-light) !important;
-  color: var(--white) !important;
+  background: center/contain no-repeat url('/play9/static/cards/p9back.svg') !important;
+  background-color: var(--green-light) !important;
+  color: transparent !important;
   font-family: var(--theme-font);
 }
 
 .pile-stack.discard-pile .pile-card:not(.pile-placeholder) {
-  background: var(--white);
+  background-color: var(--white);
   color: var(--brown);
   border: 1px solid var(--sand);
   font-family: "Times New Roman", Times, serif;
+}
+
+.pile-stack.discard-pile .pile-card.face-down {
+  background: center/contain no-repeat url('/play9/static/cards/p9back.svg') !important;
+  background-color: var(--green-light) !important;
+  color: transparent !important;
+  border: none !important;
 }
 
 /* Pile-stack containers: no card-like spot; only the pile-cards are visible */
@@ -775,6 +804,13 @@ body.table-view-mode #player-layout {
   aspect-ratio: 2/3;
   font-size: clamp(1.4rem, 2.4vw, 2rem);
   z-index: 50;
+  background-color: var(--white);
+  border: 1px solid var(--sand);
+}
+.full-table-drawn-card.face-down {
+  background: center/contain no-repeat url('/play9/static/cards/p9back.svg');
+  background-color: var(--green-light);
+  color: transparent;
 }
 
 .full-table-players {
