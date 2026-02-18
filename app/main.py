@@ -10,6 +10,15 @@ from pydantic import BaseModel
 
 from app.game import (
     add_player_to_table,
+    advance_from_scoring,
+    draw_from_discard,
+    draw_from_draw,
+    play_discard_flip,
+    play_discard_only,
+    play_put_back,
+    play_flip_after_discard,
+    play_replace,
+    restart_game,
     reveal_card,
     start_game,
     validate_table_name,
@@ -47,7 +56,7 @@ async def join_table(req: JoinRequest):
     if err:
         raise HTTPException(status_code=400, detail=err)
     table = TableState.load(table_name)
-    await manager.broadcast_table(table_name, table.to_dict())
+    await manager.broadcast_table(table_name, table.to_public_dict())
     return {"player_id": player.id, "table_name": table_name}
 
 
@@ -71,7 +80,7 @@ async def start_table_game(req: StartRequest):
     if err:
         raise HTTPException(status_code=400, detail=err)
     table.save()
-    await manager.broadcast_table(tn, table.to_dict())
+    await manager.broadcast_table(tn, table.to_public_dict())
     return {"ok": True}
 
 
@@ -94,7 +103,7 @@ async def reveal_card_endpoint(req: RevealRequest):
     if err:
         raise HTTPException(status_code=400, detail=err)
     table.save()
-    await manager.broadcast_table(tn, table.to_dict())
+    await manager.broadcast_table(tn, table.to_public_dict())
     return {"ok": True}
 
 
@@ -117,7 +126,7 @@ async def leave_table(req: LeaveRequest):
         TableState._path(tn).unlink(missing_ok=True)
     else:
         table.save()
-    state = table.to_dict() if table.players else {"phase": "empty", "players": []}
+    state = table.to_public_dict() if table.players else {"phase": "empty", "players": []}
     await manager.broadcast_table(tn, state)
     return {"ok": True}
 
@@ -138,7 +147,7 @@ async def _handle_ws_action(tn: str, player_id: str | None, msg: dict) -> dict |
     if not table and action != "ping":
         return {"error": "Table not found"}
     if action == "ping":
-        state = table.to_dict() if table else {"phase": "empty", "players": []}
+        state = table.to_public_dict() if table else {"phase": "empty", "players": []}
         return state
     if action == "start":
         if not player_id:
@@ -149,7 +158,7 @@ async def _handle_ws_action(tn: str, player_id: str | None, msg: dict) -> dict |
         if err:
             return {"error": err}
         table.save()
-        return table.to_dict()
+        return table.to_public_dict()
     if action == "reveal":
         if not player_id:
             return {"error": "Player ID required"}
@@ -158,7 +167,75 @@ async def _handle_ws_action(tn: str, player_id: str | None, msg: dict) -> dict |
         if err:
             return {"error": err}
         table.save()
-        return table.to_dict()
+        return table.to_public_dict()
+    if action == "draw_from_draw":
+        if not player_id:
+            return {"error": "Player ID required"}
+        err = draw_from_draw(table, player_id)
+        if err:
+            return {"error": err}
+        table.save()
+        return table.to_public_dict()
+    if action == "draw_from_discard":
+        if not player_id:
+            return {"error": "Player ID required"}
+        err = draw_from_discard(table, player_id)
+        if err:
+            return {"error": err}
+        table.save()
+        return table.to_public_dict()
+    if action == "play_replace":
+        if not player_id:
+            return {"error": "Player ID required"}
+        err = play_replace(table, player_id, msg.get("card_index", -1))
+        if err:
+            return {"error": err}
+        table.save()
+        return table.to_public_dict()
+    if action == "play_discard_flip":
+        if not player_id:
+            return {"error": "Player ID required"}
+        err = play_discard_flip(table, player_id, msg.get("card_index", -1))
+        if err:
+            return {"error": err}
+        table.save()
+        return table.to_public_dict()
+    if action == "play_discard_only":
+        if not player_id:
+            return {"error": "Player ID required"}
+        err = play_discard_only(table, player_id)
+        if err:
+            return {"error": err}
+        table.save()
+        return table.to_public_dict()
+    if action == "play_put_back":
+        if not player_id:
+            return {"error": "Player ID required"}
+        err = play_put_back(table, player_id)
+        if err:
+            return {"error": err}
+        table.save()
+        return table.to_public_dict()
+    if action == "play_flip_after_discard":
+        if not player_id:
+            return {"error": "Player ID required"}
+        err = play_flip_after_discard(table, player_id, msg.get("card_index", -1))
+        if err:
+            return {"error": err}
+        table.save()
+        return table.to_public_dict()
+    if action == "advance_scoring":
+        err = advance_from_scoring(table)
+        if err:
+            return {"error": err}
+        table.save()
+        return table.to_public_dict()
+    if action == "restart":
+        err = restart_game(table)
+        if err:
+            return {"error": err}
+        table.save()
+        return table.to_public_dict()
     if action == "leave":
         if not player_id:
             return {"error": "Player ID required"}
@@ -168,7 +245,7 @@ async def _handle_ws_action(tn: str, player_id: str | None, msg: dict) -> dict |
             state = {"phase": "empty", "players": []}
         else:
             table.save()
-            state = table.to_dict()
+            state = table.to_public_dict()
         return state
     return {"error": f"Unknown action: {action}"}
 
@@ -183,7 +260,7 @@ async def websocket_endpoint(websocket: WebSocket, table_name: str):
     player_id = websocket.query_params.get("id")
     await manager.connect(websocket, tn, player_id)
     table = TableState.load(tn)
-    state = table.to_dict() if table else {"phase": "empty", "players": []}
+    state = table.to_public_dict() if table else {"phase": "empty", "players": []}
     try:
         await websocket.send_text(json.dumps(state))
     except Exception:
@@ -221,7 +298,7 @@ async def get_table_state(table_name: str):
     table = TableState.load(tn)
     if not table:
         return {"phase": "empty", "players": []}
-    return table.to_dict()
+    return table.to_public_dict()
 
 
 # Mount static assets (CSS, JS) under /play9/static

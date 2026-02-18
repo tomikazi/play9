@@ -4,6 +4,12 @@
   const playerInput = document.getElementById('player-name');
   const errorEl = document.getElementById('error');
 
+  const LAST_TABLE_KEY = 'play9_last_table';
+  const lastTable = localStorage.getItem(LAST_TABLE_KEY);
+  if (lastTable) {
+    tableInput.value = lastTable;
+  }
+
   // Force table name to lowercase on input
   tableInput.addEventListener('input', function () {
     this.value = this.value.toLowerCase().replace(/[^a-z0-9_-]/g, '');
@@ -35,6 +41,7 @@
         errorEl.hidden = false;
         return;
       }
+      localStorage.setItem(LAST_TABLE_KEY, data.table_name);
       const url = new URL(`/play9/table/${data.table_name}`, window.location.origin);
       if (data.player_id) {
         url.searchParams.set('id', data.player_id);
