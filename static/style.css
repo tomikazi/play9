@@ -379,12 +379,32 @@ body.player-view-mode #player-layout {
   overflow: hidden;
 }
 
+.player-view-piles-wrap {
+  position: relative;
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  align-items: center;
+  justify-content: center;
+}
+
 .player-view-piles {
   display: flex;
   gap: 4rem;
   align-items: center;
   justify-content: center;
   flex: 1;
+}
+
+.player-view-drawn-card {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translate(-50%, 0);
+  width: calc(var(--player-card-width) * 1.6);
+  height: calc(var(--player-card-height) * 1.6);
+  font-size: calc(clamp(1.2rem, 6.5vw, 2.5rem) + 8pt);
+  z-index: 50;
 }
 
 .player-view-top .player-view-piles {
@@ -741,13 +761,13 @@ body.table-view-mode #player-layout {
 
 .full-table-drawn-card {
   position: absolute;
-  top: calc(-1 * (clamp(4rem, 8vw, 6rem) * 1.6) - 2rem);
+  top: 0;
   left: 50%;
   transform: translate(-50%, 0);
   width: calc(clamp(4rem, 8vw, 6rem) * 1.6);
   aspect-ratio: 2/3;
   font-size: calc(clamp(1.4rem, 2.4vw, 2rem) * 1.6);
-  z-index: 3;
+  z-index: 50;
 }
 
 .full-table-players {

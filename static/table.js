@@ -223,6 +223,8 @@
       top.className = 'player-view-top';
 
       if (state.phase === 'reveal' || state.phase === 'play') {
+        const pilesWrap = document.createElement('div');
+        pilesWrap.className = 'player-view-piles-wrap';
         const piles = document.createElement('div');
         piles.className = 'player-view-piles';
         const drawHighlight = state.phase === 'play' && isMyTurn && !hasDrawn && !state.must_flip_after_discard;
@@ -249,7 +251,15 @@
 
         piles.appendChild(drawPileEl);
         piles.appendChild(discardPileEl);
-        top.appendChild(piles);
+        pilesWrap.appendChild(piles);
+
+        if (state.phase === 'play' && state.drawn_card && !isMyTurn) {
+          const floatingCard = document.createElement('div');
+          floatingCard.className = 'player-view-drawn-card card face-up highlight';
+          floatingCard.textContent = isCardValueKnown(state.drawn_card.value) ? String(state.drawn_card.value) : '?';
+          pilesWrap.appendChild(floatingCard);
+        }
+        top.appendChild(pilesWrap);
       }
       wrapper.appendChild(top);
 
