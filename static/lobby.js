@@ -5,10 +5,22 @@
   const errorEl = document.getElementById('error');
 
   const LAST_TABLE_KEY = 'play9_last_table';
+  const LAST_PLAYER_KEY = 'play9_last_player';
   const lastTable = localStorage.getItem(LAST_TABLE_KEY);
   if (lastTable) {
     tableInput.value = lastTable;
   }
+  const lastPlayer = localStorage.getItem(LAST_PLAYER_KEY);
+  if (lastPlayer) {
+    playerInput.value = lastPlayer;
+  }
+
+  const enterBtn = document.getElementById('enter-btn');
+  function updateEnterButton() {
+    enterBtn.textContent = playerInput.value.trim() ? 'Enter as Player' : 'Enter Table View';
+  }
+  updateEnterButton();
+  playerInput.addEventListener('input', updateEnterButton);
 
   // Force table name to lowercase on input
   tableInput.addEventListener('input', function () {
@@ -37,11 +49,18 @@
       });
       const data = await res.json();
       if (!res.ok) {
+        if (data.detail === 'Player already connected elsewhere') {
+          document.getElementById('already-connected-dialog').hidden = false;
+          return;
+        }
         errorEl.textContent = data.detail || 'Failed to join table.';
         errorEl.hidden = false;
         return;
       }
       localStorage.setItem(LAST_TABLE_KEY, data.table_name);
+      if (playerName) {
+        localStorage.setItem(LAST_PLAYER_KEY, playerName);
+      }
       const url = new URL(`/play9/table/${data.table_name}`, window.location.origin);
       if (data.player_id) {
         url.searchParams.set('id', data.player_id);
@@ -51,5 +70,13 @@
       errorEl.textContent = 'Network error. Please try again.';
       errorEl.hidden = false;
     }
+  });
+
+  const alreadyConnectedDialog = document.getElementById('already-connected-dialog');
+  document.getElementById('already-connected-ok').addEventListener('click', function () {
+    alreadyConnectedDialog.hidden = true;
+  });
+  alreadyConnectedDialog?.querySelector('.confirm-dialog-backdrop')?.addEventListener('click', function () {
+    alreadyConnectedDialog.hidden = true;
   });
 })();

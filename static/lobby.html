@@ -19,9 +19,18 @@
       <input type="text" id="player-name" name="player_name" placeholder="Your name (optional)" maxlength="20" autocomplete="off">
       <span class="hint">Letters, digits, spaces only. Leave blank for table view only.</span>
 
-      <button type="submit">Enter</button>
+      <button type="submit" id="enter-btn">Enter</button>
       <div id="error" class="error" hidden></div>
     </form>
+    <div id="already-connected-dialog" class="confirm-dialog" hidden aria-modal="true">
+      <div class="confirm-dialog-backdrop"></div>
+      <div class="confirm-dialog-card">
+        <p class="confirm-dialog-message">Player already connected elsewhere</p>
+        <div class="confirm-dialog-actions">
+          <button type="button" id="already-connected-ok" class="confirm-dialog-btn confirm-dialog-btn-restart">OK</button>
+        </div>
+      </div>
+    </div>
   </main>
   <script src="/play9/static/lobby.js"></script>
 </body>

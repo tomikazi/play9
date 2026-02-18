@@ -1,3 +1,4 @@
+import asyncio
 import json
 from pathlib import Path
 
@@ -13,20 +14,77 @@ from app.game import (
     advance_from_scoring,
     draw_from_discard,
     draw_from_draw,
+    find_player_by_name,
     play_discard_flip,
     play_discard_only,
     play_put_back,
     play_flip_after_discard,
     play_replace,
+    reset_table_to_empty,
     restart_game,
     reveal_card,
     start_game,
     validate_table_name,
     TableState,
 )
-from app.ws import manager
+from app.ws import manager, CLEANUP_INTERVAL
 
 app = FastAPI(title="Play Nine")
+
+def _empty_table_state(table_name: str = "") -> dict:
+    """State when table has no players or doesn't exist."""
+    return {
+        "name": table_name,
+        "phase": "empty",
+        "players": [],
+        "round_num": 0,
+        "current_player_idx": 0,
+        "draw_pile_count": 108,
+        "discard_pile_count": 0,
+        "discard_pile_top": [],
+        "dealer_idx": 0,
+        "scores": {},
+    }
+
+
+async def _broadcast_table_state(table_name: str) -> None:
+    """Load table state and broadcast to all connected clients."""
+    table = TableState.load(table_name)
+    state = table.to_public_dict() if table else _empty_table_state(table_name)
+    await manager.broadcast_table(table_name, state)
+
+
+async def _force_leave_inactive_players() -> None:
+    """Remove players inactive for over 60 seconds from their tables."""
+    to_remove = await manager.get_players_inactive_over_60s()
+    for table_name, player_id in to_remove:
+        table = TableState.load(table_name)
+        if not table:
+            await manager.clear_inactive(table_name, player_id)
+            continue
+        if not any(p.id == player_id for p in table.players):
+            await manager.clear_inactive(table_name, player_id)
+            continue
+        table.players = [p for p in table.players if p.id != player_id]
+        await manager.clear_inactive(table_name, player_id)
+        if not table.players:
+            reset_table_to_empty(table)
+        table.save()
+        state = table.to_public_dict()
+        await manager.broadcast_table(table_name, state)
+
+
+@app.on_event("startup")
+async def start_cleanup_task() -> None:
+    """Background tasks: disconnect stale connections, force-leave inactive players."""
+
+    async def cleanup_loop() -> None:
+        while True:
+            await asyncio.sleep(CLEANUP_INTERVAL)
+            await manager.cleanup_stale_connections(_broadcast_table_state)
+            await _force_leave_inactive_players()
+
+    asyncio.create_task(cleanup_loop())
 
 STATIC_DIR = Path(__file__).resolve().parent.parent / "static"
 STATIC_DIR.mkdir(exist_ok=True)
@@ -43,15 +101,37 @@ async def lobby():
     return FileResponse(STATIC_DIR / "lobby.html")
 
 
+ALREADY_CONNECTED_MSG = "Player already connected elsewhere"
+
+
+def _ensure_table_exists(table_name: str) -> TableState:
+    """Create table with no-game state if it doesn't exist. Returns the table."""
+    table = TableState.load(table_name)
+    if not table:
+        table = TableState(name=table_name)
+        reset_table_to_empty(table)
+        table.save()
+    return table
+
+
 @app.post("/play9/join")
 async def join_table(req: JoinRequest):
     """Join a table as player, or enter as table view only (no player name)."""
     ok, table_name = validate_table_name(req.table_name)
     if not ok:
         raise HTTPException(status_code=400, detail=table_name)
+    table = _ensure_table_exists(table_name)
     player_name = (req.player_name or "").strip()
     if not player_name:
+        await manager.broadcast_table(table_name, table.to_public_dict())
         return {"table_name": table_name}
+    existing = find_player_by_name(table, player_name)
+    if existing:
+        if await manager.is_player_connected(table_name, existing.id):
+            raise HTTPException(status_code=400, detail=ALREADY_CONNECTED_MSG)
+        table = TableState.load(table_name)
+        await manager.broadcast_table(table_name, table.to_public_dict())
+        return {"player_id": existing.id, "table_name": table_name}
     player, _, err = add_player_to_table(req.table_name, player_name)
     if err:
         raise HTTPException(status_code=400, detail=err)
@@ -123,10 +203,9 @@ async def leave_table(req: LeaveRequest):
         raise HTTPException(status_code=404, detail="Table not found")
     table.players = [p for p in table.players if p.id != req.player_id]
     if not table.players:
-        TableState._path(tn).unlink(missing_ok=True)
-    else:
-        table.save()
-    state = table.to_public_dict() if table.players else {"phase": "empty", "players": []}
+        reset_table_to_empty(table)
+    table.save()
+    state = table.to_public_dict()
     await manager.broadcast_table(tn, state)
     return {"ok": True}
 
@@ -146,8 +225,8 @@ async def _handle_ws_action(tn: str, player_id: str | None, msg: dict) -> dict |
     table = TableState.load(tn)
     if not table and action != "ping":
         return {"error": "Table not found"}
-    if action == "ping":
-        state = table.to_public_dict() if table else {"phase": "empty", "players": []}
+    if action == "ping" or action == "heartbeat":
+        state = table.to_public_dict() if table else _empty_table_state(tn)
         return state
     if action == "start":
         if not player_id:
@@ -241,12 +320,9 @@ async def _handle_ws_action(tn: str, player_id: str | None, msg: dict) -> dict |
             return {"error": "Player ID required"}
         table.players = [p for p in table.players if p.id != player_id]
         if not table.players:
-            TableState._path(tn).unlink(missing_ok=True)
-            state = {"phase": "empty", "players": []}
-        else:
-            table.save()
-            state = table.to_public_dict()
-        return state
+            reset_table_to_empty(table)
+        table.save()
+        return table.to_public_dict()
     return {"error": f"Unknown action: {action}"}
 
 
@@ -257,10 +333,16 @@ async def websocket_endpoint(websocket: WebSocket, table_name: str):
     if not ok:
         await websocket.close(code=4000)
         return
+    await websocket.accept()
     player_id = websocket.query_params.get("id")
+    if player_id and await manager.is_player_connected(tn, player_id):
+        await websocket.send_text(json.dumps({"error": ALREADY_CONNECTED_MSG}))
+        await websocket.close()
+        return
     await manager.connect(websocket, tn, player_id)
     table = TableState.load(tn)
-    state = table.to_public_dict() if table else {"phase": "empty", "players": []}
+    state = table.to_public_dict() if table else _empty_table_state(tn)
+    state["active_player_ids"] = await manager.get_active_player_ids(tn)
     try:
         await websocket.send_text(json.dumps(state))
     except Exception:
@@ -273,6 +355,8 @@ async def websocket_endpoint(websocket: WebSocket, table_name: str):
                 msg = json.loads(raw) if raw else {}
             except json.JSONDecodeError:
                 continue
+            if msg.get("type") == "heartbeat":
+                await manager.record_heartbeat(websocket, tn)
             result = await _handle_ws_action(tn, player_id, msg)
             if result is None:
                 continue
@@ -297,8 +381,12 @@ async def get_table_state(table_name: str):
         raise HTTPException(status_code=400, detail="Invalid table name")
     table = TableState.load(tn)
     if not table:
-        return {"phase": "empty", "players": []}
-    return table.to_public_dict()
+        state = _empty_table_state(tn)
+        state["active_player_ids"] = await manager.get_active_player_ids(tn)
+        return state
+    state = table.to_public_dict()
+    state["active_player_ids"] = await manager.get_active_player_ids(tn)
+    return state
 
 
 # Mount static assets (CSS, JS) under /play9/static

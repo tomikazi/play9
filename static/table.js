@@ -10,17 +10,14 @@
     } catch (_) {}
   }
 
-  const tableDisplay = document.getElementById('table-display');
-  const playerList = document.getElementById('player-list');
-  const startBtn = document.getElementById('start-game');
-  const leaveBtn = document.getElementById('leave-table');
-  const waitingRoom = document.getElementById('waiting-room');
   const gameSection = document.getElementById('game-section');
-  const startHint = document.getElementById('start-hint');
+  const waitingRoomDialog = document.getElementById('waiting-room-dialog');
+  const waitingDialogPlayerList = document.getElementById('waiting-dialog-player-list');
+  const startBtn = document.getElementById('start-game');
+  const waitingLeaveBtn = document.getElementById('waiting-leave-btn');
 
-  tableDisplay.textContent = tableName;
   if (!playerId) {
-    startHint.hidden = true;
+    gameSection.hidden = false;
   }
 
   function getWsUrl() {
@@ -30,18 +27,25 @@
     return url;
   }
 
-  function renderPlayers(players) {
-    playerList.innerHTML = (players || []).map(p => `<li>${escapeHtml(p.name)}</li>`).join('');
-    const isPlayer = !!playerId;
-    startBtn.disabled = !isPlayer || !players || players.length < 2;
-    startBtn.hidden = !isPlayer;
-    if (startHint) startHint.hidden = !isPlayer;
+  function updateWaitingDialog(players, activePlayerIds) {
+    if (!waitingDialogPlayerList) return;
+    const active = new Set(activePlayerIds || []);
+    waitingDialogPlayerList.innerHTML = (players || []).map(p => {
+      const display = active.has(p.id) ? p.name : p.name + ' 😴';
+      return `<li>${escapeHtml(display)}</li>`;
+    }).join('');
+    if (startBtn) startBtn.disabled = !players || players.length < 2;
   }
 
   function escapeHtml(s) {
     const div = document.createElement('div');
     div.textContent = s;
     return div.innerHTML;
+  }
+
+  function playerDisplayName(p, activePlayerIds) {
+    const active = new Set(activePlayerIds || []);
+    return active.has(p.id) ? p.name : p.name + ' 😴';
   }
 
   function syncCardSizeFromSpread() {
@@ -160,7 +164,9 @@
   function updateGameTitle(state) {
     const el = document.getElementById('game-title');
     if (!el) return;
-    if (state.phase === 'waiting' || state.phase === 'empty') {
+    if (!state.players || state.players.length === 0 || state.phase === 'empty') {
+      el.textContent = 'Waiting for Players';
+    } else if (state.phase === 'waiting') {
       el.textContent = '';
     } else {
       el.textContent = state.round_num >= 9 ? 'Game Over' : `Round ${state.round_num}`;
@@ -173,16 +179,18 @@
       if (flyover) flyover.hidden = true;
     }
     if (state.phase === 'empty' || !state.players) {
-      renderPlayers([]);
+      updateWaitingDialog([], []);
     } else {
-      renderPlayers(state.players);
+      updateWaitingDialog(state.players, state.active_player_ids);
     }
-    if (state.phase === 'waiting' || state.phase === 'empty') {
-      document.body.classList.remove('table-view-mode', 'player-view-mode');
-      waitingRoom.hidden = false;
-      gameSection.hidden = true;
+    const showWaitingRoom = playerId && state.phase === 'waiting';
+    if (showWaitingRoom) {
+      gameSection.hidden = false;
+      updateGameTitle(state);
+      renderGame(state);
+      if (waitingRoomDialog) waitingRoomDialog.hidden = false;
     } else {
-      waitingRoom.hidden = true;
+      if (waitingRoomDialog) waitingRoomDialog.hidden = true;
       gameSection.hidden = false;
       updateGameTitle(state);
       renderGame(state);
@@ -206,7 +214,7 @@
       return;
     }
 
-    if (!playerId) {
+    if (!playerId || state.phase === 'waiting') {
       renderTableView(state, tableLayout);
       return;
     }
@@ -400,7 +408,7 @@
       slot.className = 'full-table-slot slot-' + pos + (i === turnIdx && state.phase === 'play' ? ' current-turn' : '');
       const nameEl = document.createElement('div');
       nameEl.className = 'full-table-player-name';
-      nameEl.textContent = p.name;
+      nameEl.textContent = playerDisplayName(p, state.active_player_ids);
       slot.appendChild(nameEl);
 
       const grid = document.createElement('div');
@@ -489,7 +497,7 @@
         slot.className = 'full-table-slot slot-' + pos;
         const nameEl = document.createElement('div');
         nameEl.className = 'full-table-player-name';
-        nameEl.textContent = p.name;
+        nameEl.textContent = playerDisplayName(p, state.active_player_ids);
         slot.appendChild(nameEl);
         const grid = document.createElement('div');
         grid.className = 'full-table-card-grid';
@@ -582,7 +590,7 @@
   let reconnectTimer = null;
   let pingTimer = null;
   const RECONNECT_DELAY = 3000;
-  const PING_INTERVAL = 20000;
+  const HEARTBEAT_INTERVAL = 5000;
 
   function sendAction(action) {
     if (ws && ws.readyState === WebSocket.OPEN) {
@@ -711,10 +719,19 @@
       try {
         const data = JSON.parse(ev.data);
         if (data.error) {
+          if (data.error === 'Player already connected elsewhere') {
+            document.getElementById('already-connected-dialog').hidden = false;
+            if (reconnectTimer) {
+              clearTimeout(reconnectTimer);
+              reconnectTimer = null;
+            }
+            ws = null;
+            return;
+          }
           if (data.error !== 'Not a player at this table') {
             alert(data.error);
           }
-          if (waitingRoom && !waitingRoom.hidden) {
+          if (playerId && waitingRoomDialog && !waitingRoomDialog.hidden) {
             startBtn.disabled = false;
           }
           return;
@@ -740,9 +757,9 @@
     stopPing();
     pingTimer = setInterval(function () {
       if (ws && ws.readyState === WebSocket.OPEN) {
-        sendAction({ type: 'ping' });
+        sendAction({ type: 'heartbeat' });
       }
-    }, PING_INTERVAL);
+    }, HEARTBEAT_INTERVAL);
   }
 
   function stopPing() {
@@ -767,7 +784,7 @@
     window.location.href = '/play9';
   }
 
-  leaveBtn.addEventListener('click', doLeave);
+  waitingLeaveBtn?.addEventListener('click', doLeave);
 
   document.getElementById('leave-game')?.addEventListener('click', doLeave);
 
@@ -798,7 +815,15 @@
   });
   restartConfirmDialog?.querySelector('.confirm-dialog-backdrop')?.addEventListener('click', closeRestartConfirm);
 
-  startBtn.addEventListener('click', function () {
+  const alreadyConnectedDialog = document.getElementById('already-connected-dialog');
+  document.getElementById('already-connected-ok')?.addEventListener('click', function () {
+    window.location.href = '/play9';
+  });
+  alreadyConnectedDialog?.querySelector('.confirm-dialog-backdrop')?.addEventListener('click', function () {
+    window.location.href = '/play9';
+  });
+
+  startBtn?.addEventListener('click', function () {
     if (!playerId) return;
     startBtn.disabled = true;
     sendAction({ type: 'start' });

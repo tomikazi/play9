@@ -286,6 +286,11 @@ body.player-view-mode .game-header {
   color: var(--brown);
 }
 
+.score-total {
+  font-size: 1.1em;
+  font-weight: 700;
+}
+
 body.table-view-mode .score-flyover {
   transform: translate(-50%, -50%) scale(1.6);
 }
@@ -999,4 +1004,58 @@ body.table-view-mode .full-table-player-name {
 }
 .confirm-dialog-btn-restart:hover {
   background: var(--green-light);
+}
+
+.confirm-dialog-btn-restart:disabled {
+  background: #aaa;
+  cursor: not-allowed;
+}
+
+/* Waiting room dialog (player view) */
+.waiting-room-dialog .waiting-room-dialog-card {
+  min-width: 280px;
+  max-width: 360px;
+}
+
+.waiting-room-dialog-title {
+  font-family: var(--theme-font);
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--green);
+  margin: 0 0 1rem 0;
+}
+
+.waiting-room-player-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 1rem;
+  background: var(--white);
+  border: 1px solid var(--sand);
+  border-radius: 6px;
+  max-height: 12rem;
+  overflow-y: auto;
+}
+
+.waiting-room-player-list li {
+  font-family: var(--theme-font);
+  padding: 0.6rem 1rem;
+  border-bottom: 1px solid var(--sand);
+  color: var(--brown);
+}
+
+.waiting-room-player-list li:last-child {
+  border-bottom: none;
+}
+
+.waiting-room-hint {
+  font-family: var(--theme-font);
+  font-size: 0.8rem;
+  color: #888;
+  margin: 0 0 1rem 0;
+}
+
+.waiting-room-actions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: flex-end;
 }

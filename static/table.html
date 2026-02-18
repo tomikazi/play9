@@ -8,20 +8,7 @@
 </head>
 <body>
   <main class="table-view" id="app">
-    <!-- Waiting Room -->
-    <section id="waiting-room" class="waiting-room">
-      <header>
-        <h2>Waiting Room: <span id="table-display"></span></h2>
-        <button id="leave-table" class="icon-btn" title="Leave Table" aria-label="Leave Table">
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-        </button>
-      </header>
-      <ul id="player-list"></ul>
-      <button id="start-game" disabled>Start Game</button>
-      <p class="hint" id="start-hint">Need at least 2 players to start</p>
-    </section>
-
-    <!-- Game views (hidden until game starts) -->
+    <!-- Game section -->
     <section id="game-section" class="game-section" hidden>
       <header class="game-header">
         <button id="restart-game" class="icon-btn" title="Restart Game" aria-label="Restart Game">
@@ -42,6 +29,27 @@
           <div class="confirm-dialog-actions">
             <button type="button" id="restart-confirm-cancel" class="confirm-dialog-btn confirm-dialog-btn-cancel">Cancel</button>
             <button type="button" id="restart-confirm-restart" class="confirm-dialog-btn confirm-dialog-btn-restart">Restart</button>
+          </div>
+        </div>
+      </div>
+      <div id="already-connected-dialog" class="confirm-dialog" hidden aria-modal="true">
+        <div class="confirm-dialog-backdrop"></div>
+        <div class="confirm-dialog-card">
+          <p class="confirm-dialog-message">Player already connected elsewhere</p>
+          <div class="confirm-dialog-actions">
+            <button type="button" id="already-connected-ok" class="confirm-dialog-btn confirm-dialog-btn-restart">Return to Lobby</button>
+          </div>
+        </div>
+      </div>
+      <div id="waiting-room-dialog" class="waiting-room-dialog confirm-dialog" hidden aria-modal="true" aria-labelledby="waiting-dialog-title">
+        <div class="waiting-room-dialog-backdrop confirm-dialog-backdrop"></div>
+        <div class="waiting-room-dialog-card confirm-dialog-card">
+          <h2 id="waiting-dialog-title" class="waiting-room-dialog-title">Waiting for Players</h2>
+          <ul id="waiting-dialog-player-list" class="waiting-room-player-list" aria-label="Players at table"></ul>
+          <p class="waiting-room-hint" id="waiting-dialog-hint">Need at least 2 players to start</p>
+          <div class="waiting-room-actions">
+            <button type="button" id="waiting-leave-btn" class="confirm-dialog-btn confirm-dialog-btn-cancel">Leave Table</button>
+            <button type="button" id="start-game" class="confirm-dialog-btn confirm-dialog-btn-restart" disabled>Start Game</button>
           </div>
         </div>
       </div>

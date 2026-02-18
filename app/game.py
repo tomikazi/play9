@@ -230,6 +230,25 @@ def build_deck() -> list[Card]:
     return deck
 
 
+def reset_table_to_empty(table: TableState) -> None:
+    """Reset table to no-game state: full draw pile, empty discard, no players."""
+    table.players = []
+    table.phase = "empty"
+    table.round_num = 0
+    table.current_player_idx = 0
+    table.dealer_idx = 0
+    table.draw_pile = build_deck()
+    table.discard_pile = []
+    table.drawn_card = None
+    table.drawn_from = None
+    table.must_flip_after_discard = False
+    table.hole_ended_by = None
+    table.final_turns_remaining = []
+    table.scores = {}
+    table.round_scores = {}
+    table.last_affected_card = None
+
+
 def start_game(table: TableState) -> Optional[str]:
     """Start the first round. Returns error message or None on success."""
     if table.phase != "waiting":
@@ -580,8 +599,11 @@ def create_player(name: str) -> Player:
     return Player(id=str(uuid.uuid4()), name=name)
 
 
-def add_player_to_table(table_name: str, player_name: str) -> tuple[Optional[Player], Optional[str], Optional[str]]:
-    """Add a player to a table. Creates table if needed. Returns (player, table_name, error)."""
+def add_player_to_table(
+    table_name: str, player_name: str
+) -> tuple[Optional[Player], Optional[str], Optional[str]]:
+    """Add a new player to a table. Creates table if needed. Returns (player, table_name, error).
+    Fails if a player with the same name already exists (use find_player_by_name for reconnect)."""
     ok, name = validate_player_name(player_name)
     if not ok:
         return None, None, name
@@ -589,7 +611,15 @@ def add_player_to_table(table_name: str, player_name: str) -> tuple[Optional[Pla
     if not ok:
         return None, None, tn
     table = TableState.load(tn) or TableState(name=tn)
+    if any(p.name == name for p in table.players):
+        return None, None, "Player name already taken"
     player = create_player(name)
     table.players.append(player)
     table.save()
     return player, tn, None
+
+
+def find_player_by_name(table: TableState, player_name: str) -> Optional[Player]:
+    """Find existing player at table by name (case-sensitive match)."""
+    name = player_name.strip()
+    return next((p for p in table.players if p.name == name), None)
