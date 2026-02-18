@@ -381,7 +381,7 @@ body.player-view-mode #player-layout {
   justify-content: center;
   width: 100%;
   max-width: 100%;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .player-view-piles-wrap {
@@ -457,10 +457,10 @@ body.player-view-mode .player-view-bottom .card-grid {
   grid-template-columns: repeat(4, minmax(0, 1fr));
   grid-template-rows: repeat(2, auto);
   gap: clamp(0.25rem, 1vw, 0.5rem);
-  padding: 0 0.5rem;
+  padding: 0 0.5rem 2rem;
   align-items: center;
   justify-items: center;
-  overflow: hidden;
+  overflow: visible;
 }
 
 body.player-view-mode .player-view-bottom .card-grid .card {
@@ -678,7 +678,7 @@ body.player-view-mode .player-view-center .drawn-card {
 
 .pile-stack.discard-pile.clickable:hover .pile-card:last-of-type,
 .discard-pile.clickable:hover {
-  background: var(--sand);
+  background-color: var(--sand);
   border-color: var(--green);
 }
 

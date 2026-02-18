@@ -138,8 +138,8 @@
       const idxFromTop = visibleCount - 1 - i;
       const val = top[idxFromTop];
       const known = isCardValueKnown(val);
-      el.className = 'pile-card card ' + (known ? 'face-up' : 'face-down');
-      el.textContent = known ? String(val) : '';
+      el.className = 'pile-card card face-up';
+      el.textContent = idxFromTop < 2 && known ? String(val) : '-';
       const posInPile = n - visibleCount + i;
       const seed = posInPile * 127 + (isCardValueKnown(val) ? val : 0);
       const rot = pileRotation(seed, -20, 20);
