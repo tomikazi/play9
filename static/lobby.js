@@ -60,12 +60,18 @@
       localStorage.setItem(LAST_TABLE_KEY, data.table_name);
       if (playerName) {
         localStorage.setItem(LAST_PLAYER_KEY, playerName);
+        const id = data.player_id;
+        if (!id) {
+          errorEl.textContent = 'Invalid response from server.';
+          errorEl.hidden = false;
+          return;
+        }
+        const url = new URL(`/play9/player/${data.table_name}`, window.location.origin);
+        url.searchParams.set('id', id);
+        window.location.href = url.toString();
+      } else {
+        window.location.href = `/play9/table/${data.table_name}`;
       }
-      const url = new URL(`/play9/table/${data.table_name}`, window.location.origin);
-      if (data.player_id) {
-        url.searchParams.set('id', data.player_id);
-      }
-      window.location.href = url.toString();
     } catch (err) {
       errorEl.textContent = 'Network error. Please try again.';
       errorEl.hidden = false;

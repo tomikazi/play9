@@ -55,7 +55,7 @@ The table view should show the discard pile and the draw pile next to each other
 ### Player View
 The player view should show the discard pile and the draw pile next to each other near the top part of the screen, while the player’s own card layout should occupy the bottom of the screen. This layout should optimized for portrait orientation as it’s expected to be used on mobile phones.
 
-The Waiting Room view, Table View and Player Views are just logical distinction of  same resource `/play9/table/<table-name>`. For player views, it is `/play9/table/<table-name>?id=<player-id>`
+Table view is served at `/play9/table/<table-name>`. Player view (including the waiting room) is at `/play9/player/<table-name>?id=<player-id>`.
 
 
 ### Score Card View

@@ -212,11 +212,20 @@ async def leave_table(req: LeaveRequest):
 
 @app.get("/play9/table/{table_name}")
 async def table_view(table_name: str):
-    """Serve the table/waiting room/player view (same resource, id param distinguishes)."""
+    """Serve the table view (spectator)."""
     ok, _ = validate_table_name(table_name)
     if not ok:
         raise HTTPException(status_code=400, detail="Invalid table name")
     return FileResponse(STATIC_DIR / "table.html")
+
+
+@app.get("/play9/player/{table_name}")
+async def player_view(table_name: str):
+    """Serve the player view. Requires ?id= for player_id."""
+    ok, _ = validate_table_name(table_name)
+    if not ok:
+        raise HTTPException(status_code=400, detail="Invalid table name")
+    return FileResponse(STATIC_DIR / "player.html")
 
 
 async def _handle_ws_action(tn: str, player_id: str | None, msg: dict) -> dict | None:

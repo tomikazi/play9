@@ -1,0 +1,288 @@
+/* Play Nine — Player view only */
+
+body.player-view-mode {
+  overflow: hidden;
+  height: 100vh;
+}
+
+body.player-view-mode .game-section {
+  display: flex;
+  flex-direction: column;
+  max-width: none;
+  width: 100%;
+  height: 100vh;
+  padding: 0.5rem;
+  overflow: hidden;
+}
+
+body.player-view-mode .game-header {
+  margin-bottom: 0.5rem;
+}
+
+body.player-view-mode #table-layout {
+  display: none;
+}
+
+body.player-view-mode #player-layout {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.player-view {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
+.player-view-top {
+  flex: 0 0 30%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+
+.player-view-center {
+  flex: 0 0 30%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+
+.player-view-center .center-instruction {
+  font-family: var(--theme-font);
+  font-size: clamp(1rem, 4vw, 1.5rem);
+  font-weight: 600;
+  color: var(--green);
+  margin: 0;
+  text-align: center;
+  text-shadow: 0 0 20px var(--underglow), 0 0 40px var(--underglow);
+}
+
+.player-view-center .center-instruction-wait {
+  color: #6b6b6b;
+  text-shadow: none;
+}
+
+.player-view-center .center-instruction-score {
+  font-size: clamp(1.75rem, 8vw, 2.5rem);
+  color: var(--green);
+  text-shadow: 0 0 20px var(--underglow), 0 0 40px var(--underglow);
+}
+
+.player-view-bottom {
+  flex: 0 0 40%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  max-width: 100%;
+  overflow: visible;
+}
+
+.player-view-piles-wrap {
+  position: relative;
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  align-items: center;
+  justify-content: center;
+}
+
+.player-view-piles {
+  display: flex;
+  gap: 4rem;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+}
+
+.player-view.show-drawn-card .player-view-top {
+  position: relative;
+  z-index: 1000;
+}
+
+.player-view-drawn-card {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translate(-50%, 0) scale(1.6);
+  transform-origin: top center;
+  width: var(--player-card-width);
+  height: var(--player-card-height);
+  font-size: calc(clamp(0.8rem, 4vw, 1.5rem) + 5pt);
+  z-index: 1000;
+  background: center/contain no-repeat url('/play9/static/cards/p9front.svg');
+  background-color: var(--white);
+  border: 1px solid var(--sand);
+}
+.player-view-drawn-card.face-down {
+  background: center/contain no-repeat url('/play9/static/cards/p9back.svg');
+  background-color: var(--green-light);
+  color: transparent;
+}
+
+.player-view-top .player-view-piles {
+  flex: 1;
+  min-height: 0;
+}
+
+body.player-view-mode .player-view-top .pile-stack {
+  height: var(--player-card-height);
+  width: var(--player-card-width);
+}
+
+body.player-view-mode .player-view-top .pile-stack .pile-card {
+  font-size: calc(clamp(0.8rem, 4vw, 1.5rem) + 5pt);
+}
+
+.discard-pile {
+  font-family: "Times New Roman", Times, serif;
+  min-width: 60px;
+  height: 84px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--white);
+  color: var(--brown);
+  border: 1px solid var(--sand);
+  border-radius: 8px;
+  font-weight: 600;
+}
+
+body.player-view-mode .player-view-top .pile-btn,
+body.player-view-mode .player-view-top .discard-pile {
+  height: var(--player-card-height);
+  width: var(--player-card-width);
+  font-size: calc(clamp(0.8rem, 4vw, 1.5rem) + 5pt);
+}
+
+.player-view.round-complete .player-view-top {
+  flex: 1;
+  min-height: 0;
+}
+
+.player-view.round-complete .player-view-bottom {
+  flex: 0 0 40%;
+  min-height: 0;
+}
+
+.player-view h3,
+.game-section h3 {
+  font-family: var(--theme-font);
+  margin: 0 0 0.25rem;
+  font-size: clamp(0.9rem, 3vw, 1.1rem);
+  font-weight: 600;
+  color: var(--green);
+}
+
+.game-section h3 {
+  margin: 0 0 1rem;
+  font-size: 1.1rem;
+}
+
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.5rem;
+}
+
+body.player-view-mode .player-view-bottom .card-grid {
+  width: 100%;
+  max-width: 100%;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-rows: repeat(2, auto);
+  gap: clamp(0.25rem, 1vw, 0.5rem);
+  padding: 0 0.5rem 2rem;
+  align-items: center;
+  justify-items: center;
+  overflow: visible;
+}
+
+body.player-view-mode .player-view-bottom .card-grid .card {
+  aspect-ratio: 2/3;
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  font-size: calc(clamp(0.8rem, 4vw, 1.5rem) + 5pt);
+  align-self: center;
+  justify-self: center;
+}
+
+/* Waiting room dialog — full veil over main view */
+.waiting-room-dialog .waiting-room-dialog-backdrop {
+  background: var(--cream);
+}
+
+.waiting-room-dialog .waiting-room-dialog-card {
+  min-width: 280px;
+  max-width: 360px;
+}
+
+.waiting-room-leave-btn {
+  position: fixed;
+  top: 0.5rem;
+  right: 0.5rem;
+  z-index: 1001;
+  color: var(--brown);
+}
+
+.waiting-room-leave-btn:hover {
+  background: var(--sand);
+}
+
+.waiting-room-dialog-title {
+  font-family: var(--theme-font);
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--green);
+  margin: 0 0 0.5rem 0;
+  text-align: center;
+}
+
+.waiting-room-subtitle {
+  font-family: var(--theme-font);
+  font-size: 0.95rem;
+  color: #666;
+  margin: 0 0 1rem 0;
+  text-align: center;
+}
+
+.waiting-room-player-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 1rem;
+  background: var(--white);
+  border: 1px solid var(--sand);
+  border-radius: 6px;
+  max-height: 12rem;
+  overflow-y: auto;
+}
+
+.waiting-room-player-list li {
+  font-family: var(--theme-font);
+  padding: 0.6rem 1rem;
+  border-bottom: 1px solid var(--sand);
+  color: var(--brown);
+}
+
+.waiting-room-player-list li:last-child {
+  border-bottom: none;
+}
+
+.waiting-room-actions {
+  display: flex;
+  justify-content: center;
+}
