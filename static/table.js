@@ -297,7 +297,9 @@
 
       me.hand.forEach((card, i) => {
         const el = document.createElement('div');
-        el.className = 'card' + (card.face_up ? ' face-up' : ' face-down');
+        let cls = 'card' + (card.face_up ? ' face-up' : ' face-down');
+        if (isLastAffectedCard(state, me.id, i)) cls += ' last-affected';
+        el.className = cls;
         if (card.face_up && isCardValueKnown(card.value)) {
           el.textContent = card.value;
         } else {
@@ -337,38 +339,51 @@
     }
   }
 
+  function isLastAffectedCard(state, playerId, cardIndex) {
+    const lac = state.last_affected_card;
+    return lac && lac[0] === playerId && lac[1] === cardIndex;
+  }
+
+  function slotPositionForPlayer(n, i) {
+    if (n <= 2) return i === 0 ? 'left' : 'right';
+    if (n === 3) return ['left', 'top', 'right'][i];
+    if (n === 4) return ['left', 'top', 'right', 'bottom'][i];
+    if (n === 5) return ['left', 'top-left', 'top', 'right', 'bottom'][i];
+    return ['left', 'top-left', 'top-right', 'right', 'bottom-right', 'bottom-left'][i];
+  }
+
   function renderTableView(state, container) {
-    const phaseLabel = state.phase === 'reveal' ? 'Reveal' : 'Play';
+    const turnIdx = state.current_player_idx;
 
     const wrapper = document.createElement('div');
     wrapper.className = 'full-table';
 
-    const header = document.createElement('div');
-    header.className = 'full-table-header';
-    header.textContent = phaseLabel;
-    const turnIdx = state.current_player_idx;
-    const turnName = state.players[turnIdx]?.name;
-    if (state.phase === 'play' && turnName) {
-      header.textContent += ` • ${turnName}'s turn`;
-    }
-    wrapper.appendChild(header);
+    const surface = document.createElement('div');
+    surface.className = 'full-table-surface';
 
     const center = document.createElement('div');
     center.className = 'full-table-center';
 
     const drawPile = createStackedDrawPile(state.draw_pile_count ?? 0, { variant: 'table' });
     const discardPile = createStackedDiscardPile(state.discard_pile_count ?? 0, state.discard_pile_top ?? [], { variant: 'table' });
-
     center.appendChild(drawPile);
     center.appendChild(discardPile);
-    wrapper.appendChild(center);
+
+    if (state.phase === 'play' && state.drawn_card) {
+      const floatingCard = document.createElement('div');
+      floatingCard.className = 'full-table-drawn-card card face-up highlight';
+      floatingCard.textContent = isCardValueKnown(state.drawn_card.value) ? String(state.drawn_card.value) : '?';
+      center.appendChild(floatingCard);
+    }
+    surface.appendChild(center);
 
     const playersWrap = document.createElement('div');
     playersWrap.className = 'full-table-players players-' + state.players.length;
 
     state.players.forEach((p, i) => {
       const slot = document.createElement('div');
-      slot.className = 'full-table-slot' + (i === turnIdx && state.phase === 'play' ? ' current-turn' : '');
+      const pos = slotPositionForPlayer(state.players.length, i);
+      slot.className = 'full-table-slot slot-' + pos + (i === turnIdx && state.phase === 'play' ? ' current-turn' : '');
       const nameEl = document.createElement('div');
       nameEl.className = 'full-table-player-name';
       nameEl.textContent = p.name;
@@ -376,9 +391,11 @@
 
       const grid = document.createElement('div');
       grid.className = 'full-table-card-grid';
-      (p.hand || []).forEach(card => {
+      (p.hand || []).forEach((card, ci) => {
         const c = document.createElement('div');
-        c.className = 'card' + (card.face_up ? ' face-up' : ' face-down');
+        let cls = 'card' + (card.face_up ? ' face-up' : ' face-down');
+        if (isLastAffectedCard(state, p.id, ci)) cls += ' last-affected';
+        c.className = cls;
         c.textContent = card.face_up && isCardValueKnown(card.value) ? card.value : '?';
         grid.appendChild(c);
       });
@@ -386,7 +403,8 @@
       playersWrap.appendChild(slot);
     });
 
-    wrapper.appendChild(playersWrap);
+    surface.appendChild(playersWrap);
+    wrapper.appendChild(surface);
     container.appendChild(wrapper);
   }
 
@@ -420,9 +438,11 @@
       bottom.className = 'player-view-bottom';
       const grid = document.createElement('div');
       grid.className = 'card-grid';
-      me.hand.forEach((card) => {
+      me.hand.forEach((card, i) => {
         const el = document.createElement('div');
-        el.className = 'card face-up';
+        let cls = 'card face-up';
+        if (isLastAffectedCard(state, me.id, i)) cls += ' last-affected';
+        el.className = cls;
         el.textContent = card.face_up && isCardValueKnown(card.value) ? card.value : '?';
         grid.appendChild(el);
       });
@@ -441,35 +461,42 @@
       header.textContent = `Round ${state.round_num} complete`;
       wrapper.appendChild(header);
 
+      const surface = document.createElement('div');
+      surface.className = 'full-table-surface';
+
       const center = document.createElement('div');
       center.className = 'full-table-center';
       const drawPile = createStackedDrawPile(state.draw_pile_count ?? 0, { variant: 'table' });
       const discardPile = createStackedDiscardPile(state.discard_pile_count ?? 0, state.discard_pile_top ?? [], { variant: 'table' });
       center.appendChild(drawPile);
       center.appendChild(discardPile);
-      wrapper.appendChild(center);
+      surface.appendChild(center);
 
       const playersWrap = document.createElement('div');
       playersWrap.className = 'full-table-players players-' + state.players.length;
       state.players.forEach((p, i) => {
         const slot = document.createElement('div');
-        slot.className = 'full-table-slot';
+        const pos = slotPositionForPlayer(state.players.length, i);
+        slot.className = 'full-table-slot slot-' + pos;
         const nameEl = document.createElement('div');
         nameEl.className = 'full-table-player-name';
         nameEl.textContent = p.name;
         slot.appendChild(nameEl);
         const grid = document.createElement('div');
         grid.className = 'full-table-card-grid';
-        (p.hand || []).forEach((card) => {
+        (p.hand || []).forEach((card, ci) => {
           const c = document.createElement('div');
-          c.className = 'card face-up';
+          let cls = 'card face-up';
+          if (isLastAffectedCard(state, p.id, ci)) cls += ' last-affected';
+          c.className = cls;
           c.textContent = card.face_up && isCardValueKnown(card.value) ? card.value : '?';
           grid.appendChild(c);
         });
         slot.appendChild(grid);
         playersWrap.appendChild(slot);
       });
-      wrapper.appendChild(playersWrap);
+      surface.appendChild(playersWrap);
+      wrapper.appendChild(surface);
       tableLayout.appendChild(wrapper);
     }
   }

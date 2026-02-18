@@ -80,6 +80,7 @@ class TableState:
     hole_ended_by: Optional[int] = None  # player idx who triggered hole end
     final_turns_remaining: list[int] = field(default_factory=list)
     round_scores: dict[str, int] = field(default_factory=dict)  # this round's scores
+    last_affected_card: Optional[tuple[str, int]] = None  # (player_id, card_index) for highlight
 
     DATA_DIR = Path("/play9")
 
@@ -132,6 +133,8 @@ class TableState:
             d["final_turns_remaining"] = self.final_turns_remaining
         if self.round_scores:
             d["round_scores"] = self.round_scores
+        if self.last_affected_card:
+            d["last_affected_card"] = list(self.last_affected_card)
         return d
 
     FACE_DOWN_MASK = -99
@@ -178,6 +181,8 @@ class TableState:
             d["final_turns_remaining"] = self.final_turns_remaining
         if self.round_scores:
             d["round_scores"] = self.round_scores
+        if self.last_affected_card:
+            d["last_affected_card"] = list(self.last_affected_card)
         return d
 
     @classmethod
@@ -194,6 +199,7 @@ class TableState:
             )
 
         drawn = d.get("drawn_card")
+        lac = d.get("last_affected_card")
         return cls(
             name=d["name"],
             players=[dict_to_player(p) for p in d.get("players", [])],
@@ -210,6 +216,7 @@ class TableState:
             hole_ended_by=d.get("hole_ended_by"),
             final_turns_remaining=d.get("final_turns_remaining", []),
             round_scores=d.get("round_scores", {}),
+            last_affected_card=tuple(lac) if lac and len(lac) == 2 else None,
         )
 
 
@@ -243,6 +250,7 @@ def restart_game(table: TableState) -> Optional[str]:
 
 def _deal_new_round(table: TableState, round_num: int = 1) -> Optional[str]:
     """Deal a new round. Keeps players, resets hands and piles."""
+    table.last_affected_card = None
     deck = build_deck()
     for p in table.players:
         p.hand = [deck.pop() for _ in range(8)]
@@ -279,6 +287,7 @@ def reveal_card(table: TableState, player_id: str, card_index: int) -> Optional[
         return "Card already face-up"
     card.face_up = True
     player.revealed_count += 1
+    table.last_affected_card = (player_id, card_index)
     # Check if all players have revealed 2 → transition to play
     if all(p.revealed_count >= 2 for p in table.players):
         table.phase = "play"
@@ -310,6 +319,7 @@ def _check_hole_end(table: TableState, player_idx: int) -> bool:
 
 def _finish_hole(table: TableState) -> None:
     """Flip remaining face-downs, score, transition to scoring phase."""
+    table.last_affected_card = None
     for p in table.players:
         for c in p.hand:
             c.face_up = True
@@ -437,6 +447,7 @@ def play_replace(table: TableState, player_id: str, card_index: int) -> Optional
     player.hand[card_index] = table.drawn_card
     old.face_up = True
     table.discard_pile.append(old)
+    table.last_affected_card = (player_id, card_index)
     table.drawn_card = None
     table.drawn_from = None
     if _check_hole_end(table, idx):
@@ -474,6 +485,7 @@ def play_discard_flip(table: TableState, player_id: str, card_index: int) -> Opt
     table.drawn_card = None
     table.drawn_from = None
     card.face_up = True
+    table.last_affected_card = (player_id, card_index)
     if _check_hole_end(table, idx):
         n = len(table.players)
         table.hole_ended_by = idx
@@ -509,6 +521,7 @@ def play_flip_after_discard(table: TableState, player_id: str, card_index: int) 
         return "Card already face-up"
     card.face_up = True
     table.must_flip_after_discard = False
+    table.last_affected_card = (player_id, card_index)
     if _check_hole_end(table, idx):
         n = len(table.players)
         table.hole_ended_by = idx
