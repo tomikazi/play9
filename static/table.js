@@ -62,6 +62,7 @@
   const PILE_STACK_VISIBLE = 10;
   const PILE_STACK_VISIBLE_DRAW = 8;
   const FACE_DOWN_MASK = -99;
+  const FACE_DOWN_SYMBOL = '⛳';
 
   function isCardValueKnown(val) {
     return val != null && val > FACE_DOWN_MASK;
@@ -108,7 +109,7 @@
     for (let i = 0; i < visibleCount; i++) {
       const el = document.createElement('div');
       el.className = 'pile-card card face-down';
-      el.textContent = '?';
+      el.textContent = FACE_DOWN_SYMBOL;
       const posInPile = n - visibleCount + i;
       const rot = pileRotation(posInPile, -5, 5);
       const offset = i * 2;
@@ -140,7 +141,7 @@
       el.className = 'pile-card card face-up';
       const idxFromTop = visibleCount - 1 - i;
       const val = top[idxFromTop];
-      el.textContent = isCardValueKnown(val) ? String(val) : '?';
+      el.textContent = isCardValueKnown(val) ? String(val) : FACE_DOWN_SYMBOL;
       const posInPile = n - visibleCount + i;
       const seed = posInPile * 127 + (isCardValueKnown(val) ? val : 0);
       const rot = pileRotation(seed, -20, 20);
@@ -256,7 +257,7 @@
         if (state.phase === 'play' && state.drawn_card && !isMyTurn) {
           const floatingCard = document.createElement('div');
           floatingCard.className = 'player-view-drawn-card card face-up highlight';
-          floatingCard.textContent = isCardValueKnown(state.drawn_card.value) ? String(state.drawn_card.value) : '?';
+          floatingCard.textContent = isCardValueKnown(state.drawn_card.value) ? String(state.drawn_card.value) : FACE_DOWN_SYMBOL;
           pilesWrap.appendChild(floatingCard);
         }
         top.appendChild(pilesWrap);
@@ -313,7 +314,7 @@
         if (card.face_up && isCardValueKnown(card.value)) {
           el.textContent = card.value;
         } else {
-          el.textContent = '?';
+          el.textContent = FACE_DOWN_SYMBOL;
         }
         if (state.phase === 'reveal') {
           const canFlip = !card.face_up && me.revealed_count < 2;
@@ -382,7 +383,7 @@
     if (state.phase === 'play' && state.drawn_card) {
       const floatingCard = document.createElement('div');
       floatingCard.className = 'full-table-drawn-card card face-up highlight';
-      floatingCard.textContent = isCardValueKnown(state.drawn_card.value) ? String(state.drawn_card.value) : '?';
+      floatingCard.textContent = isCardValueKnown(state.drawn_card.value) ? String(state.drawn_card.value) : FACE_DOWN_SYMBOL;
       center.appendChild(floatingCard);
     }
     surface.appendChild(center);
@@ -406,7 +407,7 @@
         let cls = 'card' + (card.face_up ? ' face-up' : ' face-down');
         if (isLastAffectedCard(state, p.id, ci)) cls += ' last-affected';
         c.className = cls;
-        c.textContent = card.face_up && isCardValueKnown(card.value) ? card.value : '?';
+        c.textContent = card.face_up && isCardValueKnown(card.value) ? card.value : FACE_DOWN_SYMBOL;
         grid.appendChild(c);
       });
       slot.appendChild(grid);
@@ -453,7 +454,7 @@
         let cls = 'card face-up';
         if (isLastAffectedCard(state, me.id, i)) cls += ' last-affected';
         el.className = cls;
-        el.textContent = card.face_up && isCardValueKnown(card.value) ? card.value : '?';
+        el.textContent = card.face_up && isCardValueKnown(card.value) ? card.value : FACE_DOWN_SYMBOL;
         grid.appendChild(el);
       });
       bottom.appendChild(grid);
@@ -494,7 +495,7 @@
           let cls = 'card face-up';
           if (isLastAffectedCard(state, p.id, ci)) cls += ' last-affected';
           c.className = cls;
-          c.textContent = card.face_up && isCardValueKnown(card.value) ? card.value : '?';
+          c.textContent = card.face_up && isCardValueKnown(card.value) ? card.value : FACE_DOWN_SYMBOL;
           grid.appendChild(c);
         });
         slot.appendChild(grid);
@@ -596,7 +597,7 @@
   function createDragGhost(value) {
     const ghost = document.createElement('div');
     ghost.className = 'drag-ghost card face-up';
-    ghost.textContent = value != null ? String(value) : '?';
+    ghost.textContent = value != null ? String(value) : FACE_DOWN_SYMBOL;
     ghost.style.cssText = 'position:fixed;pointer-events:none;z-index:9999;opacity:0.95;';
     document.body.appendChild(ghost);
     return ghost;
