@@ -466,11 +466,6 @@
       const wrapper = document.createElement('div');
       wrapper.className = 'full-table round-complete';
 
-      const header = document.createElement('div');
-      header.className = 'full-table-header';
-      header.textContent = `Round ${state.round_num} complete`;
-      wrapper.appendChild(header);
-
       const surface = document.createElement('div');
       surface.className = 'full-table-surface';
 
@@ -619,8 +614,8 @@
       const startY = e.clientY;
       let dragStarted = false;
       let ghost = null;
-      const w = rect.width * 2;
-      const h = rect.height * 2;
+      const w = rect.width;
+      const h = rect.height;
 
       const onMove = function (e) {
         if (dragStarted && dragState) {
