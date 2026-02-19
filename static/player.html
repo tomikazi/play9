@@ -25,10 +25,20 @@
       <div id="restart-confirm-dialog" class="confirm-dialog" hidden aria-modal="true">
         <div class="confirm-dialog-backdrop"></div>
         <div class="confirm-dialog-card">
-          <p class="confirm-dialog-message">You are about to restart entire game!</p>
+          <p class="confirm-dialog-message">Request vote to restart game</p>
           <div class="confirm-dialog-actions">
             <button type="button" id="restart-confirm-cancel" class="confirm-dialog-btn confirm-dialog-btn-cancel">Cancel</button>
             <button type="button" id="restart-confirm-restart" class="confirm-dialog-btn confirm-dialog-btn-restart">Restart</button>
+          </div>
+        </div>
+      </div>
+      <div id="restart-vote-dialog" class="confirm-dialog" hidden aria-modal="true">
+        <div class="confirm-dialog-backdrop"></div>
+        <div class="confirm-dialog-card">
+          <p id="restart-vote-message" class="confirm-dialog-message"><span id="restart-vote-requester"></span> wants to restart the game</p>
+          <div class="confirm-dialog-actions">
+            <button type="button" id="restart-vote-no" class="confirm-dialog-btn confirm-dialog-btn-cancel">Nope</button>
+            <button type="button" id="restart-vote-yes" class="confirm-dialog-btn confirm-dialog-btn-restart">Restart</button>
           </div>
         </div>
       </div>

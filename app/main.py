@@ -1,5 +1,6 @@
 import asyncio
 import json
+import time
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
@@ -31,6 +32,9 @@ from app.ws import manager, CLEANUP_INTERVAL
 
 app = FastAPI(title="Play Nine")
 
+# Restart vote state: table_name -> { requested_by, requested_by_name, yes_votes, requested_at }
+_restart_votes: dict = {}
+
 def _empty_table_state(table_name: str = "") -> dict:
     """State when table has no players or doesn't exist."""
     return {
@@ -47,11 +51,30 @@ def _empty_table_state(table_name: str = "") -> dict:
     }
 
 
+def _merge_restart_vote_state(table_name: str, state: dict) -> dict:
+    """Add restart vote fields to state for client display."""
+    vote = _restart_votes.get(table_name)
+    if not vote:
+        return state
+    return {
+        **state,
+        "restart_requested_by": vote["requested_by_name"],
+        "restart_yes_votes": list(vote["yes_votes"]),
+        "restart_requested_at": vote["requested_at"],
+    }
+
+
+async def _broadcast_with_restart_state(table_name: str, state: dict) -> None:
+    """Merge restart vote state and broadcast."""
+    state = _merge_restart_vote_state(table_name, state)
+    await manager.broadcast_table(table_name, state)
+
+
 async def _broadcast_table_state(table_name: str) -> None:
     """Load table state and broadcast to all connected clients."""
     table = TableState.load(table_name)
     state = table.to_public_dict() if table else _empty_table_state(table_name)
-    await manager.broadcast_table(table_name, state)
+    await _broadcast_with_restart_state(table_name, state)
 
 
 async def _force_leave_inactive_players() -> None:
@@ -71,7 +94,7 @@ async def _force_leave_inactive_players() -> None:
             reset_table_to_empty(table)
         table.save()
         state = table.to_public_dict()
-        await manager.broadcast_table(table_name, state)
+        await _broadcast_with_restart_state(table_name, state)
 
 
 @app.on_event("startup")
@@ -123,20 +146,20 @@ async def join_table(req: JoinRequest):
     table = _ensure_table_exists(table_name)
     player_name = (req.player_name or "").strip()
     if not player_name:
-        await manager.broadcast_table(table_name, table.to_public_dict())
+        await _broadcast_with_restart_state(table_name, table.to_public_dict())
         return {"table_name": table_name}
     existing = find_player_by_name(table, player_name)
     if existing:
         if await manager.is_player_connected(table_name, existing.id):
             raise HTTPException(status_code=400, detail=ALREADY_CONNECTED_MSG)
         table = TableState.load(table_name)
-        await manager.broadcast_table(table_name, table.to_public_dict())
+        await _broadcast_with_restart_state(table_name, table.to_public_dict())
         return {"player_id": existing.id, "table_name": table_name}
     player, _, err = add_player_to_table(req.table_name, player_name)
     if err:
         raise HTTPException(status_code=400, detail=err)
     table = TableState.load(table_name)
-    await manager.broadcast_table(table_name, table.to_public_dict())
+    await _broadcast_with_restart_state(table_name, table.to_public_dict())
     return {"player_id": player.id, "table_name": table_name}
 
 
@@ -160,7 +183,7 @@ async def start_table_game(req: StartRequest):
     if err:
         raise HTTPException(status_code=400, detail=err)
     table.save()
-    await manager.broadcast_table(tn, table.to_public_dict())
+    await _broadcast_with_restart_state(tn, table.to_public_dict())
     return {"ok": True}
 
 
@@ -183,7 +206,7 @@ async def reveal_card_endpoint(req: RevealRequest):
     if err:
         raise HTTPException(status_code=400, detail=err)
     table.save()
-    await manager.broadcast_table(tn, table.to_public_dict())
+    await _broadcast_with_restart_state(tn, table.to_public_dict())
     return {"ok": True}
 
 
@@ -206,7 +229,7 @@ async def leave_table(req: LeaveRequest):
         reset_table_to_empty(table)
     table.save()
     state = table.to_public_dict()
-    await manager.broadcast_table(tn, state)
+    await _broadcast_with_restart_state(tn, state)
     return {"ok": True}
 
 
@@ -318,6 +341,55 @@ async def _handle_ws_action(tn: str, player_id: str | None, msg: dict) -> dict |
             return {"error": err}
         table.save()
         return table.to_public_dict()
+    if action == "request_restart":
+        if not player_id:
+            return {"error": "Player ID required"}
+        if not any(p.id == player_id for p in table.players):
+            return {"error": "Not a player at this table"}
+        if table.phase not in ("reveal", "play", "scoring"):
+            return {"error": "Game not in progress"}
+        n = len(table.players)
+        if n < 2:
+            return {"error": "Need at least 2 players"}
+        requester = next(p for p in table.players if p.id == player_id)
+        threshold = n if n == 2 else (n + 1) // 2
+        _restart_votes[tn] = {
+            "requested_by": player_id,
+            "requested_by_name": requester.name,
+            "yes_votes": {player_id},
+            "requested_at": time.time(),
+        }
+        if len(_restart_votes[tn]["yes_votes"]) >= threshold:
+            _restart_votes.pop(tn, None)
+            err = restart_game(table)
+            if err:
+                return {"error": err}
+            table.save()
+            return table.to_public_dict()
+        return table.to_public_dict()
+    if action == "vote_restart_no":
+        if not player_id:
+            return {"error": "Player ID required"}
+        return table.to_public_dict()
+    if action == "vote_restart":
+        if not player_id:
+            return {"error": "Player ID required"}
+        if not any(p.id == player_id for p in table.players):
+            return {"error": "Not a player at this table"}
+        vote = _restart_votes.get(tn)
+        if not vote:
+            return table.to_public_dict()
+        vote["yes_votes"].add(player_id)
+        n = len(table.players)
+        threshold = n if n == 2 else (n + 1) // 2
+        if len(vote["yes_votes"]) >= threshold:
+            _restart_votes.pop(tn, None)
+            err = restart_game(table)
+            if err:
+                return {"error": err}
+            table.save()
+            return table.to_public_dict()
+        return table.to_public_dict()
     if action == "restart":
         err = restart_game(table)
         if err:
@@ -328,6 +400,7 @@ async def _handle_ws_action(tn: str, player_id: str | None, msg: dict) -> dict |
         if not player_id:
             return {"error": "Player ID required"}
         table.players = [p for p in table.players if p.id != player_id]
+        _restart_votes.pop(tn, None)
         if not table.players:
             reset_table_to_empty(table)
         table.save()
@@ -375,7 +448,7 @@ async def websocket_endpoint(websocket: WebSocket, table_name: str):
                 except Exception:
                     pass
             else:
-                await manager.broadcast_table(tn, result)
+                await _broadcast_with_restart_state(tn, result)
     except WebSocketDisconnect:
         pass
     finally:
@@ -390,7 +463,8 @@ async def get_table_state(table_name: str):
         raise HTTPException(status_code=400, detail="Invalid table name")
     table = TableState.load(tn)
     state = table.to_public_dict() if table else _empty_table_state(tn)
-    return await manager.enrich_state_for_clients(tn, state)
+    state = await manager.enrich_state_for_clients(tn, state)
+    return _merge_restart_vote_state(tn, state)
 
 
 # Mount static assets (CSS, JS) under /play9/static

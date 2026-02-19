@@ -77,6 +77,48 @@
     }
   }
 
+  let lastDismissedRestartAt = null;
+  let restartVoteTimer = null;
+  const RESTART_VOTE_TIMEOUT_MS = 30000;
+
+  let restartVoteTimerRequestedAt = null;
+
+  function updateRestartVoteDialog(state) {
+    const dialog = document.getElementById('restart-vote-dialog');
+    const requesterEl = document.getElementById('restart-vote-requester');
+    if (!dialog || !requesterEl) return;
+    const requestedBy = state.restart_requested_by;
+    const requestedAt = state.restart_requested_at;
+    const yesVotes = new Set(state.restart_yes_votes || []);
+    const show = requestedBy && requestedAt != null && playerId && !yesVotes.has(playerId) &&
+      (lastDismissedRestartAt == null || requestedAt > lastDismissedRestartAt);
+    if (!show) {
+      if (restartVoteTimer) {
+        clearTimeout(restartVoteTimer);
+        restartVoteTimer = null;
+        restartVoteTimerRequestedAt = null;
+      }
+      dialog.hidden = true;
+      return;
+    }
+    requesterEl.textContent = requestedBy;
+    dialog.hidden = false;
+    if (restartVoteTimer && restartVoteTimerRequestedAt === requestedAt) {
+      return;
+    }
+    if (restartVoteTimer) {
+      clearTimeout(restartVoteTimer);
+    }
+    restartVoteTimerRequestedAt = requestedAt;
+    restartVoteTimer = setTimeout(function () {
+      restartVoteTimer = null;
+      restartVoteTimerRequestedAt = null;
+      lastDismissedRestartAt = lastStateForInactive?.restart_requested_at ?? Date.now() / 1000;
+      sendAction({ type: 'vote_restart_no' });
+      if (dialog) dialog.hidden = true;
+    }, RESTART_VOTE_TIMEOUT_MS);
+  }
+
   function updateWaitingDialog(players, activePlayerIds) {
     if (!waitingDialogPlayerList) return;
     const active = new Set(activePlayerIds || []);
@@ -190,6 +232,7 @@
       if (flyover) flyover.hidden = true;
     }
     updateWaitingDialog(state.players || [], state.active_player_ids || []);
+    updateRestartVoteDialog(state);
     updateInactiveTurnFlyover(state);
     const showWaitingRoom = state.phase === 'waiting' || state.phase === 'empty';
     if (showWaitingRoom) {
@@ -381,7 +424,7 @@
             return;
           }
           if (data.error === 'Game already started') {
-            sendAction({ type: 'restart' });
+            sendAction({ type: 'request_restart' });
             return;
           }
           if (data.error !== 'Not a player at this table') alert(data.error);
@@ -439,10 +482,47 @@
   restartConfirmRestart?.addEventListener('click', function (e) {
     e.preventDefault();
     e.stopPropagation();
-    sendAction({ type: 'restart' });
+    sendAction({ type: 'request_restart' });
     closeRestartConfirm();
   });
   restartConfirmDialog?.querySelector('.confirm-dialog-backdrop')?.addEventListener('click', closeRestartConfirm);
+
+  const restartVoteDialog = document.getElementById('restart-vote-dialog');
+  const restartVoteNo = document.getElementById('restart-vote-no');
+  const restartVoteYes = document.getElementById('restart-vote-yes');
+  restartVoteNo?.addEventListener('click', function (e) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (restartVoteTimer) {
+      clearTimeout(restartVoteTimer);
+      restartVoteTimer = null;
+      restartVoteTimerRequestedAt = null;
+    }
+    lastDismissedRestartAt = lastStateForInactive?.restart_requested_at ?? Date.now() / 1000;
+    sendAction({ type: 'vote_restart_no' });
+    if (restartVoteDialog) restartVoteDialog.hidden = true;
+  });
+  restartVoteYes?.addEventListener('click', function (e) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (restartVoteTimer) {
+      clearTimeout(restartVoteTimer);
+      restartVoteTimer = null;
+      restartVoteTimerRequestedAt = null;
+    }
+    sendAction({ type: 'vote_restart' });
+    if (restartVoteDialog) restartVoteDialog.hidden = true;
+  });
+  restartVoteDialog?.querySelector('.confirm-dialog-backdrop')?.addEventListener('click', function () {
+    if (restartVoteTimer) {
+      clearTimeout(restartVoteTimer);
+      restartVoteTimer = null;
+      restartVoteTimerRequestedAt = null;
+    }
+    lastDismissedRestartAt = lastStateForInactive?.restart_requested_at ?? Date.now() / 1000;
+    sendAction({ type: 'vote_restart_no' });
+    if (restartVoteDialog) restartVoteDialog.hidden = true;
+  });
 
   const alreadyConnectedDialog = document.getElementById('already-connected-dialog');
   document.getElementById('already-connected-ok')?.addEventListener('click', () => { window.location.href = '/play9'; });

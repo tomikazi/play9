@@ -251,7 +251,7 @@ def reset_table_to_empty(table: TableState) -> None:
 
 def start_game(table: TableState) -> Optional[str]:
     """Start the first round. Returns error message or None on success."""
-    if table.phase != "waiting":
+    if table.phase not in ("waiting", "empty"):
         return "Game already started"
     if len(table.players) < 2:
         return "Need at least 2 players"
@@ -615,6 +615,8 @@ def add_player_to_table(
         return None, None, "Player name already taken"
     player = create_player(name)
     table.players.append(player)
+    if table.phase == "empty":
+        table.phase = "waiting"
     table.save()
     return player, tn, None
 
