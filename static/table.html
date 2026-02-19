@@ -4,6 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Play Nine — Table View</title>
+  <link rel="icon" href="/play9/static/play9.webp" type="image/webp">
+  <link rel="apple-touch-icon" href="/play9/static/play9.webp">
   <link rel="stylesheet" href="/play9/static/common.css">
   <link rel="stylesheet" href="/play9/static/table.css">
 </head>
@@ -19,6 +21,15 @@
       <div id="table-layout"></div>
       <div id="player-layout"></div>
       <div id="score-flyover" class="score-flyover" hidden></div>
+      <div id="error-dialog" class="confirm-dialog alert-dialog" hidden aria-modal="true" aria-labelledby="error-dialog-message">
+        <div class="confirm-dialog-backdrop"></div>
+        <div class="confirm-dialog-card">
+          <p id="error-dialog-message" class="confirm-dialog-message"></p>
+          <div class="confirm-dialog-actions">
+            <button type="button" id="error-dialog-ok" class="confirm-dialog-btn confirm-dialog-btn-restart">OK</button>
+          </div>
+        </div>
+      </div>
       <div id="inactive-turn-flyover" class="inactive-turn-flyover confirm-dialog" hidden aria-modal="true" aria-labelledby="inactive-turn-message">
         <div class="inactive-turn-veil confirm-dialog-backdrop"></div>
         <div class="inactive-turn-card confirm-dialog-card">

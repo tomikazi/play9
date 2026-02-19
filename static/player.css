@@ -129,7 +129,10 @@ body.player-view-mode #player-layout {
   border: 1px solid var(--sand);
 }
 .player-view-drawn-card.face-down {
-  background: center/contain no-repeat url('/play9/static/cards/p9back.svg');
+  background-image: url('/play9/static/play9.webp'), url('/play9/static/cards/p9back.svg');
+  background-size: 50% auto, contain;
+  background-position: center, center;
+  background-repeat: no-repeat, no-repeat;
   background-color: var(--green-light);
   color: transparent;
 }

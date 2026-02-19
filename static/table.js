@@ -12,6 +12,19 @@
 
   const gameSection = document.getElementById('game-section');
 
+  function showErrorDialog(message) {
+    const dialog = document.getElementById('error-dialog');
+    const msgEl = document.getElementById('error-dialog-message');
+    if (!dialog || !msgEl) return;
+    msgEl.textContent = message;
+    dialog.hidden = false;
+  }
+
+  function closeErrorDialog() {
+    const dialog = document.getElementById('error-dialog');
+    if (dialog) dialog.hidden = true;
+  }
+
   function getWsUrl() {
     const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     return `${proto}//${window.location.host}/play9/ws/${tableName}`;
@@ -124,7 +137,9 @@
       try {
         const data = JSON.parse(ev.data);
         if (data.error) {
-          if (data.error !== 'Not a player at this table') alert(data.error);
+          if (data.error !== 'Not a player at this table') {
+            showErrorDialog(data.error);
+          }
           return;
         }
         applyState(data);
@@ -150,6 +165,9 @@
   document.getElementById('leave-game')?.addEventListener('click', function () {
     window.location.href = '/play9';
   });
+
+  document.getElementById('error-dialog-ok')?.addEventListener('click', closeErrorDialog);
+  document.getElementById('error-dialog')?.querySelector('.confirm-dialog-backdrop')?.addEventListener('click', closeErrorDialog);
 
   connect();
   fetch(`/play9/api/table/${tableName}`).then(r => r.json()).then(applyState);

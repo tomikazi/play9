@@ -81,6 +81,13 @@ body {
   border-radius: 8px;
 }
 
+.score-flyover-logo {
+  display: block;
+  margin: 0 auto 1rem;
+  max-width: 108px;
+  height: auto;
+}
+
 .score-flyover h3 {
   font-family: var(--theme-font);
   margin: 0 0 1rem;
@@ -130,7 +137,10 @@ body {
 }
 
 .card.face-down {
-  background: center/contain no-repeat url('/play9/static/cards/p9back.svg');
+  background-image: url('/play9/static/play9.webp'), url('/play9/static/cards/p9back.svg');
+  background-size: 50% auto, contain;
+  background-position: center, center;
+  background-repeat: no-repeat, no-repeat;
   background-color: var(--green-light);
   color: transparent;
 }
@@ -152,7 +162,10 @@ body {
   color: var(--brown);
 }
 .drag-ghost.card.face-down {
-  background: center/contain no-repeat url('/play9/static/cards/p9back.svg');
+  background-image: url('/play9/static/play9.webp'), url('/play9/static/cards/p9back.svg');
+  background-size: 50% auto, contain;
+  background-position: center, center;
+  background-repeat: no-repeat, no-repeat;
   background-color: var(--green-light);
   color: transparent;
 }
@@ -189,7 +202,10 @@ body {
 }
 
 .pile-stack.draw-pile .pile-card:not(.pile-placeholder) {
-  background: center/contain no-repeat url('/play9/static/cards/p9back.svg') !important;
+  background-image: url('/play9/static/play9.webp'), url('/play9/static/cards/p9back.svg') !important;
+  background-size: 50% auto, contain !important;
+  background-position: center, center !important;
+  background-repeat: no-repeat, no-repeat !important;
   background-color: var(--green-light) !important;
   color: transparent !important;
   font-family: var(--theme-font);
@@ -204,7 +220,10 @@ body {
 }
 
 .pile-stack.discard-pile .pile-card.face-down {
-  background: center/contain no-repeat url('/play9/static/cards/p9back.svg') !important;
+  background-image: url('/play9/static/play9.webp'), url('/play9/static/cards/p9back.svg') !important;
+  background-size: 50% auto, contain !important;
+  background-position: center, center !important;
+  background-repeat: no-repeat, no-repeat !important;
   background-color: var(--green-light) !important;
   color: transparent !important;
   border: none !important;
@@ -309,7 +328,10 @@ body {
   border: 1px solid var(--sand);
 }
 .full-table-drawn-card.face-down {
-  background: center/contain no-repeat url('/play9/static/cards/p9back.svg');
+  background-image: url('/play9/static/play9.webp'), url('/play9/static/cards/p9back.svg');
+  background-size: 50% auto, contain;
+  background-position: center, center;
+  background-repeat: no-repeat, no-repeat;
   background-color: var(--green-light);
   color: transparent;
 }
@@ -494,6 +516,10 @@ body {
 .confirm-dialog-btn-restart:disabled {
   background: #aaa;
   cursor: not-allowed;
+}
+
+.alert-dialog .confirm-dialog-actions {
+  justify-content: center;
 }
 
 /* Inactive-turn flyover (veil + message + countdown) */

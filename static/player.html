@@ -4,6 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Play Nine — Player</title>
+  <link rel="icon" href="/play9/static/play9.webp" type="image/webp">
+  <link rel="apple-touch-icon" href="/play9/static/play9.webp">
   <link rel="stylesheet" href="/play9/static/common.css">
   <link rel="stylesheet" href="/play9/static/player.css">
 </head>
@@ -56,6 +58,15 @@
         <div class="inactive-turn-card confirm-dialog-card">
           <p id="inactive-turn-message" class="inactive-turn-message">Waiting for <span id="inactive-turn-name"></span>…</p>
           <p class="inactive-turn-timer"><span id="inactive-turn-seconds"></span>s</p>
+        </div>
+      </div>
+      <div id="error-dialog" class="confirm-dialog alert-dialog" hidden aria-modal="true" aria-labelledby="error-dialog-message">
+        <div class="confirm-dialog-backdrop"></div>
+        <div class="confirm-dialog-card">
+          <p id="error-dialog-message" class="confirm-dialog-message"></p>
+          <div class="confirm-dialog-actions">
+            <button type="button" id="error-dialog-ok" class="confirm-dialog-btn confirm-dialog-btn-restart">OK</button>
+          </div>
         </div>
       </div>
       <div id="waiting-room-dialog" class="waiting-room-dialog confirm-dialog" hidden aria-modal="true" aria-labelledby="waiting-dialog-title">

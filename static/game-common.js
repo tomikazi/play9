@@ -249,10 +249,22 @@ window.Play9 = (function () {
     }
   }
 
+  let lastScoreFlyoverKey = null;
+
   function showScoreFlyover(state, sendAction) {
     const flyover = document.getElementById('score-flyover');
     if (!flyover) return;
+    const key = JSON.stringify({ round_num: state.round_num, round_scores: state.round_scores, scores: state.scores });
+    if (key === lastScoreFlyoverKey) {
+      flyover.hidden = false;
+      return;
+    }
+    lastScoreFlyoverKey = key;
     flyover.innerHTML = '';
+    const logo = document.createElement('img');
+    logo.src = '/play9/static/play9.webp';
+    logo.alt = '';
+    logo.className = 'score-flyover-logo';
     const title = document.createElement('h3');
     title.textContent = state.round_num >= 9 ? 'Game Over' : `Round ${state.round_num} complete`;
     const scores = (state.players || [])
@@ -271,6 +283,7 @@ window.Play9 = (function () {
     nextBtn.className = 'next-round-btn';
     nextBtn.textContent = state.round_num >= 9 ? 'Back to Lobby' : 'Next Round';
     nextBtn.addEventListener('click', () => sendAction({ type: 'advance_scoring' }));
+    flyover.appendChild(logo);
     flyover.appendChild(title);
     flyover.appendChild(table);
     flyover.appendChild(nextBtn);

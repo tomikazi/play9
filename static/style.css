@@ -7,20 +7,36 @@
   margin: 0 auto;
   padding: 2rem;
   text-align: center;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
 }
 
-.lobby h1 {
+.lobby-dialog {
+  text-align: center;
+}
+
+.lobby-logo {
+  display: block;
+  margin: 0 auto 1rem;
+  max-width: 108px;
+  height: auto;
+}
+
+.lobby-dialog h1 {
   font-family: var(--theme-font);
   color: var(--green);
-  font-size: 1.75rem;
-  margin-bottom: 0.25rem;
+  font-size: 2.25rem;
+  margin: 0 0 0.25rem 0;
 }
 
-.subtitle {
+.lobby-dialog .subtitle {
   font-family: var(--theme-font);
   color: var(--green-light);
   font-size: 0.9rem;
-  margin-bottom: 2rem;
+  margin: 0 0 1.5rem 0;
 }
 
 .card-form {
@@ -32,6 +48,8 @@
 
 .card-form label {
   font-family: var(--theme-font);
+  font-size: 0.85rem;
+  color: var(--green);
   display: block;
   text-align: left;
   font-weight: 600;

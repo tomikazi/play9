@@ -4,13 +4,17 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Play Nine</title>
+  <link rel="icon" href="/play9/static/play9.webp" type="image/webp">
+  <link rel="apple-touch-icon" href="/play9/static/play9.webp">
   <link rel="stylesheet" href="/play9/static/style.css">
 </head>
 <body>
   <main class="lobby">
-    <h1>Play Nine</h1>
-    <p class="subtitle">A golf-themed card game</p>
-    <form id="join-form" class="card-form">
+    <div class="lobby-dialog card-form">
+      <img src="/play9/static/play9.webp" alt="" class="lobby-logo">
+      <h1>Play Nine</h1>
+      <p class="subtitle">Card game for 2-6 players</p>
+      <form id="join-form">
       <label for="table-name">Table Name</label>
       <input type="text" id="table-name" name="table_name" placeholder="Table Name" maxlength="20" pattern="[a-z0-9_-]*" autocomplete="off">
       <span class="hint">Lowercase letters, digits, - and _ only</span>
@@ -21,7 +25,8 @@
 
       <button type="submit" id="enter-btn">Enter</button>
       <div id="error" class="error" hidden></div>
-    </form>
+      </form>
+    </div>
     <div id="already-connected-dialog" class="confirm-dialog" hidden aria-modal="true">
       <div class="confirm-dialog-backdrop"></div>
       <div class="confirm-dialog-card">

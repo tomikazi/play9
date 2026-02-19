@@ -18,6 +18,19 @@
   const startBtn = document.getElementById('start-game');
   const waitingLeaveBtn = document.getElementById('waiting-leave-btn');
 
+  function showErrorDialog(message) {
+    const dialog = document.getElementById('error-dialog');
+    const msgEl = document.getElementById('error-dialog-message');
+    if (!dialog || !msgEl) return;
+    msgEl.textContent = message;
+    dialog.hidden = false;
+  }
+
+  function closeErrorDialog() {
+    const dialog = document.getElementById('error-dialog');
+    if (dialog) dialog.hidden = true;
+  }
+
   function getWsUrl() {
     const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     return `${proto}//${window.location.host}/play9/ws/${tableName}?id=${encodeURIComponent(playerId)}`;
@@ -427,7 +440,9 @@
             sendAction({ type: 'request_restart' });
             return;
           }
-          if (data.error !== 'Not a player at this table') alert(data.error);
+          if (data.error !== 'Not a player at this table' && data.error !== 'Card already face-up') {
+            showErrorDialog(data.error);
+          }
           if (waitingRoomDialog && !waitingRoomDialog.hidden && startBtn) startBtn.disabled = false;
           return;
         }
@@ -527,6 +542,9 @@
   const alreadyConnectedDialog = document.getElementById('already-connected-dialog');
   document.getElementById('already-connected-ok')?.addEventListener('click', () => { window.location.href = '/play9'; });
   alreadyConnectedDialog?.querySelector('.confirm-dialog-backdrop')?.addEventListener('click', () => { window.location.href = '/play9'; });
+
+  document.getElementById('error-dialog-ok')?.addEventListener('click', closeErrorDialog);
+  document.getElementById('error-dialog')?.querySelector('.confirm-dialog-backdrop')?.addEventListener('click', closeErrorDialog);
 
   startBtn?.addEventListener('click', function () {
     startBtn.disabled = true;

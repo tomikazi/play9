@@ -7,33 +7,7 @@
   <rect stroke-width="8" stroke="#BFF4DC" fill="#1F7E4A" ry="9" rx="9" height="337" width="212" y="19" x="19"></rect>
 
   
-  <ellipse fill="#34C760" ry="75" rx="82" cy="200" cx="125"></ellipse>
-
-  
-  <ellipse opacity="0.93" fill="#2AB856" ry="69" rx="76" cy="198" cx="126"></ellipse>
-
-  
-  <ellipse fill="#1A1A1A" ry="11.5" rx="13.5" cy="205" cx="157"></ellipse>
-  <ellipse fill="#2C2C2C" ry="8" rx="9" cy="204" cx="157"></ellipse>
-
-  
-  <line stroke-linecap="round" stroke-width="4.8" stroke="#26334A" y2="205" x2="157" y1="122" x1="157"></line>
-
-  
-  <polygon stroke-width="2.5" stroke="#26334A" fill="#E63946" points="157,122 193,133 157,147"></polygon>
-
-  
-  <line stroke-width="1.9" stroke="#FFFFFF" y2="141" x2="164" y1="126" x1="164"></line>
-
-  
-  <circle stroke-width="2.5" stroke="#26334A" fill="#F8F8F8" r="11.8" cy="245" cx="71"></circle>
-  
-  <circle fill="#26334A" r="1.9" cy="241" cx="66"></circle>
-  <circle fill="#26334A" r="1.6" cy="242" cx="75.5"></circle>
-  <circle fill="#26334A" r="1.7" cy="249" cx="68.5"></circle>
-
-  
-  <text letter-spacing="1.5px" fill="#E8F8F0" font-weight="bold" font-size="34" font-family="Georgia, 'Times New Roman', serif" text-anchor="middle" y="68" x="125">Play</text>
+  <text letter-spacing="1.5px" fill="#E8F8F0" font-weight="bold" font-size="34" font-family="Georgia, 'Times New Roman', serif" text-anchor="middle" y="80" x="125">Play</text>
 
   
   <text letter-spacing="1.5px" fill="#E8F8F0" font-weight="bold" font-size="34" font-family="Georgia, 'Times New Roman', serif" text-anchor="middle" y="317" x="125">Nine</text>
