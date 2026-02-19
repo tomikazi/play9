@@ -161,6 +161,23 @@ body {
   transform-origin: center center;
   color: var(--brown);
 }
+
+.drag-ghost.card.face-up {
+  position: relative;
+  isolation: isolate;
+}
+
+.drag-ghost.card.face-up::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: url('/play9/static/play9.webp') center/55% no-repeat;
+  opacity: 0.25;
+  pointer-events: none;
+  border-radius: 8px;
+}
+
 .drag-ghost.card.face-down {
   background-image: url('/play9/static/play9.webp'), url('/play9/static/cards/p9back.svg');
   background-size: 50% auto, contain;
