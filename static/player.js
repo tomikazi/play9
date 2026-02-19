@@ -324,6 +324,10 @@
             ws = null;
             return;
           }
+          if (data.error === 'Game already started') {
+            sendAction({ type: 'restart' });
+            return;
+          }
           if (data.error !== 'Not a player at this table') alert(data.error);
           if (waitingRoomDialog && !waitingRoomDialog.hidden && startBtn) startBtn.disabled = false;
           return;

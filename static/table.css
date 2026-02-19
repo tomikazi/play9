@@ -1,19 +1,37 @@
 /* Play Nine — Table view (spectator) only */
 
+body.table-view-mode {
+  overflow: hidden;
+  height: 100vh;
+}
+
 body.table-view-mode .game-section {
   max-width: none;
+  width: 100%;
+  height: 100vh;
   padding: clamp(1rem, 2vw, 2rem);
-  min-height: 100vh;
   display: flex;
   flex-direction: column;
   align-items: stretch;
   justify-content: flex-start;
   box-sizing: border-box;
+  overflow: hidden;
 }
 
 body.table-view-mode .game-header {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  padding: clamp(1rem, 2vw, 2rem);
+  margin: 0;
   flex-shrink: 0;
-  margin-bottom: 0.5rem;
+}
+
+body.table-view-mode .game-header #game-title {
+  flex: 0 0 auto;
+  text-align: left;
 }
 
 body.table-view-mode #table-layout {
@@ -24,12 +42,53 @@ body.table-view-mode #table-layout {
   justify-content: center;
 }
 
+/* Dynamically scale gaps to fit view without overflow */
+body.table-view-mode .full-table-surface,
+body.table-view-mode .full-table-players {
+  gap: min(clamp(1rem, 5vw, 6rem), clamp(1rem, 5vh, 4rem));
+  padding: min(clamp(0.5rem, 1.5vw, 2rem), clamp(0.5rem, 1.5vh, 1.5rem));
+}
+
+body.table-view-mode .full-table-center {
+  gap: min(clamp(1.5rem, 4vw, 6rem), clamp(1.5rem, 4vh, 4rem));
+}
+
+body.table-view-mode .full-table-card-grid {
+  gap: min(0.8rem, 2vh, 2vw);
+}
+
 body.table-view-mode #player-layout {
   display: none;
 }
 
 body.table-view-mode .full-table-player-name {
   font-size: clamp(1.125rem, 2.25vw, 1.5rem);
+}
+
+body.table-view-mode .full-table-card-grid {
+  max-width: min(896px, 90vw);
+  gap: 0.8rem;
+}
+
+body.table-view-mode .full-table-card-grid .card {
+  min-height: 115px;
+  font-size: clamp(2.24rem, 3.84vw, 3.2rem);
+}
+
+@media (orientation: landscape) and (min-width: 1024px) {
+  body.table-view-mode .full-table-surface,
+  body.table-view-mode .full-table-players {
+    gap: min(clamp(2rem, 6vw, 8rem), clamp(2rem, 6vh, 5rem));
+  }
+
+  body.table-view-mode .full-table-center {
+    gap: min(clamp(2rem, 5vw, 6rem), clamp(2rem, 5vh, 4rem));
+  }
+
+  body.table-view-mode .full-table-card-grid {
+    max-width: min(672px, 56vw);
+    gap: min(0.8rem, 2.5vh, 2.5vw);
+  }
 }
 
 body.table-view-mode .score-flyover {
