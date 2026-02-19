@@ -136,7 +136,9 @@ window.Play9 = (function () {
     const center = document.createElement('div');
     center.className = 'full-table-center';
     center.appendChild(createStackedDrawPile(state.draw_pile_count ?? 0, { variant: 'table' }));
-    center.appendChild(createStackedDiscardPile(state.discard_pile_count ?? 0, state.discard_pile_top ?? [], { variant: 'table' }));
+    if (state.phase !== 'empty' && state.phase !== 'waiting') {
+      center.appendChild(createStackedDiscardPile(state.discard_pile_count ?? 0, state.discard_pile_top ?? [], { variant: 'table' }));
+    }
     if (state.phase === 'play' && state.drawn_card) {
       const fc = document.createElement('div');
       const known = isCardValueKnown(state.drawn_card.value);

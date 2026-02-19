@@ -75,6 +75,10 @@ body.table-view-mode .full-table-card-grid .card {
   font-size: clamp(2.24rem, 3.84vw, 3.2rem);
 }
 
+body.table-view-mode .pile-stack.full-table-pile.discard .pile-card:not(.pile-placeholder) {
+  font-size: clamp(2.24rem, 3.84vw, 3.2rem);
+}
+
 @media (orientation: landscape) and (min-width: 1024px) {
   body.table-view-mode .full-table-surface,
   body.table-view-mode .full-table-players {
@@ -93,4 +97,15 @@ body.table-view-mode .full-table-card-grid .card {
 
 body.table-view-mode .score-flyover {
   transform: translate(-50%, -50%) scale(1.6);
+}
+
+/* Inactive-turn flyover: no veil in table view, larger text */
+body.table-view-mode .inactive-turn-flyover .inactive-turn-veil {
+  background: transparent;
+}
+body.table-view-mode .inactive-turn-flyover .inactive-turn-message {
+  font-size: 2.6rem;  /* 1.1rem + 6 steps (0.25rem each) */
+}
+body.table-view-mode .inactive-turn-flyover .inactive-turn-timer {
+  font-size: 2rem;  /* 1.5rem + 2 steps (0.25rem each) */
 }

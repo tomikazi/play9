@@ -19,6 +19,13 @@
       <div id="table-layout"></div>
       <div id="player-layout"></div>
       <div id="score-flyover" class="score-flyover" hidden></div>
+      <div id="inactive-turn-flyover" class="inactive-turn-flyover confirm-dialog" hidden aria-modal="true" aria-labelledby="inactive-turn-message">
+        <div class="inactive-turn-veil confirm-dialog-backdrop"></div>
+        <div class="inactive-turn-card confirm-dialog-card">
+          <p id="inactive-turn-message" class="inactive-turn-message">Waiting for <span id="inactive-turn-name"></span>…</p>
+          <p class="inactive-turn-timer"><span id="inactive-turn-seconds"></span>s</p>
+        </div>
+      </div>
     </section>
   </main>
   <script src="/play9/static/game-common.js"></script>

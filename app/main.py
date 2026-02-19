@@ -351,7 +351,7 @@ async def websocket_endpoint(websocket: WebSocket, table_name: str):
     await manager.connect(websocket, tn, player_id)
     table = TableState.load(tn)
     state = table.to_public_dict() if table else _empty_table_state(tn)
-    state["active_player_ids"] = await manager.get_active_player_ids(tn)
+    state = await manager.enrich_state_for_clients(tn, state)
     try:
         await websocket.send_text(json.dumps(state))
     except Exception:
@@ -389,13 +389,8 @@ async def get_table_state(table_name: str):
     if not ok:
         raise HTTPException(status_code=400, detail="Invalid table name")
     table = TableState.load(tn)
-    if not table:
-        state = _empty_table_state(tn)
-        state["active_player_ids"] = await manager.get_active_player_ids(tn)
-        return state
-    state = table.to_public_dict()
-    state["active_player_ids"] = await manager.get_active_player_ids(tn)
-    return state
+    state = table.to_public_dict() if table else _empty_table_state(tn)
+    return await manager.enrich_state_for_clients(tn, state)
 
 
 # Mount static assets (CSS, JS) under /play9/static

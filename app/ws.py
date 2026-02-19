@@ -21,8 +21,12 @@ class ConnectionManager:
         self._connections: Dict[str, Set[Tuple[WebSocket, Optional[str]]]] = {}
         # (table_name, id(websocket)) -> last heartbeat timestamp
         self._last_heartbeat: Dict[Tuple[str, int], float] = {}
+        # (table_name, id(websocket)) -> last heartbeat epoch (for client countdown)
+        self._last_heartbeat_epoch: Dict[Tuple[str, int], float] = {}
         # (table_name, player_id) -> when player disconnected (became inactive)
         self._inactive_since: Dict[Tuple[str, str], float] = {}
+        # (table_name, player_id) -> when player disconnected, epoch (for client countdown)
+        self._inactive_since_epoch: Dict[Tuple[str, str], float] = {}
         self._lock = asyncio.Lock()
 
     async def is_player_connected(self, table_name: str, player_id: str) -> bool:
@@ -48,10 +52,13 @@ class ConnectionManager:
         async with self._lock:
             if player_id:
                 self._inactive_since.pop((table_name, player_id), None)
+                self._inactive_since_epoch.pop((table_name, player_id), None)
             if table_name not in self._connections:
                 self._connections[table_name] = set()
             self._connections[table_name].add((websocket, player_id))
-            self._last_heartbeat[(table_name, id(websocket))] = time.monotonic()
+            key = (table_name, id(websocket))
+            self._last_heartbeat[key] = time.monotonic()
+            self._last_heartbeat_epoch[key] = time.time()
 
     async def record_heartbeat(self, websocket: WebSocket, table_name: str) -> None:
         """Update last heartbeat timestamp for this connection."""
@@ -59,16 +66,22 @@ class ConnectionManager:
             key = (table_name, id(websocket))
             if key in self._last_heartbeat:
                 self._last_heartbeat[key] = time.monotonic()
+                self._last_heartbeat_epoch[key] = time.time()
 
     async def disconnect(self, websocket: WebSocket, table_name: str) -> None:
         async with self._lock:
-            self._last_heartbeat.pop((table_name, id(websocket)), None)
+            key = (table_name, id(websocket))
+            self._last_heartbeat.pop(key, None)
+            self._last_heartbeat_epoch.pop(key, None)
             if table_name in self._connections:
                 to_remove = [(ws, pid) for ws, pid in self._connections[table_name] if ws == websocket]
+                now_mono = time.monotonic()
+                now_epoch = time.time()
                 for ws, pid in to_remove:
                     self._connections[table_name].discard((ws, pid))
                     if pid:
-                        self._inactive_since[(table_name, pid)] = time.monotonic()
+                        self._inactive_since[(table_name, pid)] = now_mono
+                        self._inactive_since_epoch[(table_name, pid)] = now_epoch
                 if not self._connections[table_name]:
                     del self._connections[table_name]
 
@@ -86,14 +99,17 @@ class ConnectionManager:
                             stale_list.append((tn, ws))
                             affected_tables.add(tn)
                             break
+            now_epoch = time.time()
             for tn, ws in stale_list:
                 self._last_heartbeat.pop((tn, id(ws)), None)
+                self._last_heartbeat_epoch.pop((tn, id(ws)), None)
                 conns = self._connections.get(tn, set())
                 to_remove = [(w, pid) for w, pid in conns if w == ws]
                 for w, pid in to_remove:
                     conns.discard((w, pid))
                     if pid:
                         self._inactive_since[(tn, pid)] = time.monotonic()
+                        self._inactive_since_epoch[(tn, pid)] = now_epoch
                 if not conns:
                     self._connections.pop(tn, None)
         for tn, ws in stale_list:
@@ -124,12 +140,64 @@ class ConnectionManager:
         """Remove player from inactive tracking (after forced leave)."""
         async with self._lock:
             self._inactive_since.pop((table_name, player_id), None)
+            self._inactive_since_epoch.pop((table_name, player_id), None)
+
+    def _get_player_last_active_epoch(
+        self, table_name: str, conns: list, active_ids: List[str], player_ids: List[str]
+    ) -> Dict[str, float]:
+        """Return player_id -> last_active_epoch for players we have data for."""
+        result: Dict[str, float] = {}
+        now_epoch = time.time()
+        for ws, pid in conns:
+            if pid:
+                key = (table_name, id(ws))
+                result[pid] = self._last_heartbeat_epoch.get(key, now_epoch)
+        for pid in player_ids:
+            if pid not in result:
+                epoch = self._inactive_since_epoch.get((table_name, pid))
+                if epoch is not None:
+                    result[pid] = epoch
+        return result
+
+    async def enrich_state_for_clients(self, table_name: str, state: dict) -> dict:
+        """Add active_player_ids, player_last_active, inactive_turn_name for REST/WS initial send."""
+        async with self._lock:
+            conns = list(self._connections.get(table_name, []))
+            active_ids = self._get_active_player_ids(table_name)
+            player_ids = [p.get("id") for p in (state.get("players") or []) if p.get("id")]
+            player_last_active = self._get_player_last_active_epoch(
+                table_name, conns, active_ids, player_ids
+            )
+            state = {
+                **state,
+                "active_player_ids": active_ids,
+                "player_last_active": player_last_active,
+            }
+            if (
+                state.get("phase") == "play"
+                and state.get("players")
+                and state.get("current_player_idx") is not None
+            ):
+                players = state["players"]
+                idx = state["current_player_idx"]
+                if 0 <= idx < len(players):
+                    current = players[idx]
+                    pid = current.get("id")
+                    if pid and pid not in active_ids:
+                        last_active = player_last_active.get(pid)
+                        if last_active is not None:
+                            remaining = int(
+                                INACTIVE_LEAVE_TIMEOUT - (time.time() - last_active)
+                            )
+                            if remaining > 0:
+                                state["inactive_turn_name"] = current.get("name", "Player")
+        return state
 
     async def broadcast_table(self, table_name: str, state: dict) -> None:
         """Send state to all clients subscribed to this table."""
+        state = await self.enrich_state_for_clients(table_name, state)
         async with self._lock:
             conns = list(self._connections.get(table_name, []))
-            state = {**state, "active_player_ids": self._get_active_player_ids(table_name)}
         dead_ws = []
         for ws, _ in conns:
             try:

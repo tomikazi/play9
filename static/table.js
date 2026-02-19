@@ -20,6 +20,8 @@
   let ws = null;
   let reconnectTimer = null;
   let pingTimer = null;
+  let inactiveTurnCountdown = null;
+  let lastStateForInactive = null;
   const RECONNECT_DELAY = 3000;
   const HEARTBEAT_INTERVAL = 5000;
 
@@ -29,11 +31,64 @@
     }
   }
 
+  const INACTIVE_LEAVE_TIMEOUT = 60;
+
+  function computeInactiveSecondsRemaining(playerLastActive, currentPlayerId) {
+    if (!playerLastActive || !currentPlayerId) return null;
+    const lastEpoch = playerLastActive[currentPlayerId];
+    if (lastEpoch == null || typeof lastEpoch !== 'number') return null;
+    const elapsed = (Date.now() / 1000) - lastEpoch;
+    const remaining = Math.floor(INACTIVE_LEAVE_TIMEOUT - elapsed);
+    return remaining > 0 ? remaining : 0;
+  }
+
+  function updateInactiveTurnFlyover(state) {
+    const flyover = document.getElementById('inactive-turn-flyover');
+    const nameEl = document.getElementById('inactive-turn-name');
+    const secondsEl = document.getElementById('inactive-turn-seconds');
+    if (!flyover || !nameEl || !secondsEl) return;
+    const playerIds = state.players || [];
+    const idx = state.current_player_idx;
+    const currentPlayer = (idx != null && idx >= 0 && idx < playerIds.length) ? playerIds[idx] : null;
+    const currentPlayerId = currentPlayer && currentPlayer.id;
+    const remaining = computeInactiveSecondsRemaining(state.player_last_active, currentPlayerId);
+    const show = state.inactive_turn_name != null && remaining != null && remaining > 0;
+    if (show) {
+      nameEl.textContent = state.inactive_turn_name;
+      secondsEl.textContent = String(remaining);
+      flyover.hidden = false;
+      if (!inactiveTurnCountdown) {
+        inactiveTurnCountdown = setInterval(function () {
+          const s = lastStateForInactive;
+          const pid = s && s.players && s.current_player_idx != null ? (s.players[s.current_player_idx] || {}).id : null;
+          const r = computeInactiveSecondsRemaining(s && s.player_last_active, pid);
+          const el = document.getElementById('inactive-turn-seconds');
+          if (!el || r == null || r <= 0) {
+            if (inactiveTurnCountdown) {
+              clearInterval(inactiveTurnCountdown);
+              inactiveTurnCountdown = null;
+            }
+            return;
+          }
+          el.textContent = String(r);
+        }, 1000);
+      }
+    } else {
+      flyover.hidden = true;
+      if (inactiveTurnCountdown) {
+        clearInterval(inactiveTurnCountdown);
+        inactiveTurnCountdown = null;
+      }
+    }
+  }
+
   function applyState(state) {
+    lastStateForInactive = state;
     if (state.phase !== 'scoring') {
       const flyover = document.getElementById('score-flyover');
       if (flyover) flyover.hidden = true;
     }
+    updateInactiveTurnFlyover(state);
     gameSection.hidden = false;
     Play9.updateGameTitle(state);
     renderGame(state);

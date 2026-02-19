@@ -8,7 +8,7 @@ body.player-view-mode {
 body.player-view-mode .game-section {
   display: flex;
   flex-direction: column;
-  max-width: none;
+  max-width: 600px;
   width: 100%;
   height: 100vh;
   padding: 0.5rem;
@@ -285,4 +285,29 @@ body.player-view-mode .player-view-bottom .card-grid .card {
 .waiting-room-actions {
   display: flex;
   justify-content: center;
+}
+
+/* Inactive-turn flyover: no veil, theme typography, dark green timer, centered */
+body.player-view-mode .inactive-turn-flyover .inactive-turn-veil {
+  background: transparent;
+}
+body.player-view-mode .inactive-turn-flyover .inactive-turn-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+body.player-view-mode .inactive-turn-flyover .inactive-turn-message {
+  font-family: var(--theme-font);
+  color: var(--brown);
+  text-align: center;
+  margin: 0 0 0.5rem 0;
+}
+body.player-view-mode .inactive-turn-flyover .inactive-turn-timer {
+  font-family: var(--theme-font);
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--green);
+  text-align: center;
+  margin: 0;
 }
