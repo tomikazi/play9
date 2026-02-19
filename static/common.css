@@ -219,6 +219,21 @@ body {
   font-family: "Times New Roman", Times, serif;
 }
 
+.pile-stack.discard-pile .pile-card:not(.pile-placeholder):not(.face-down) {
+  isolation: isolate;
+}
+
+.pile-stack.discard-pile .pile-card:not(.pile-placeholder):not(.face-down)::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: url('/play9/static/play9.webp') center/55% no-repeat;
+  opacity: 0.25;
+  pointer-events: none;
+  border-radius: 8px;
+}
+
 .pile-stack.discard-pile .pile-card.face-down {
   background-image: url('/play9/static/play9.webp'), url('/play9/static/cards/p9back.svg') !important;
   background-size: 50% auto, contain !important;

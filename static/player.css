@@ -224,6 +224,24 @@ body.player-view-mode .player-view-bottom .card-grid .card {
   justify-self: center;
 }
 
+body.player-view-mode .player-view-bottom .card-grid .card.face-up {
+  position: relative;
+  isolation: isolate;
+  background: center/contain no-repeat url('/play9/static/cards/p9front.svg');
+  background-color: var(--white);
+}
+
+body.player-view-mode .player-view-bottom .card-grid .card.face-up::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: url('/play9/static/play9.webp') center/55% no-repeat;
+  opacity: 0.25;
+  pointer-events: none;
+  border-radius: 8px;
+}
+
 /* Waiting room dialog — full veil over main view */
 .waiting-room-dialog .waiting-room-dialog-backdrop {
   background: var(--cream);
