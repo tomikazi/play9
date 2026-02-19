@@ -359,6 +359,22 @@ body {
   background-color: var(--white);
   border: 1px solid var(--sand);
 }
+
+.full-table-drawn-card.face-up {
+  isolation: isolate;
+}
+
+.full-table-drawn-card.face-up::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: url('/play9/static/play9.webp') center/55% no-repeat;
+  opacity: 0.25;
+  pointer-events: none;
+  border-radius: 8px;
+}
+
 .full-table-drawn-card.face-down {
   background-image: url('/play9/static/play9.webp'), url('/play9/static/cards/p9back.svg');
   background-size: 50% auto, contain;

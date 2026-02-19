@@ -23,6 +23,11 @@ body.player-view-mode #table-layout {
   display: none;
 }
 
+body.player-view-mode .score-flyover {
+  top: 10vh;
+  transform: translate(-50%, 0);
+}
+
 body.player-view-mode #player-layout {
   flex: 1;
   min-height: 0;
@@ -122,12 +127,28 @@ body.player-view-mode #player-layout {
   transform-origin: top center;
   width: var(--player-card-width);
   height: var(--player-card-height);
-  font-size: calc(clamp(0.8rem, 4vw, 1.5rem) + 5pt);
+  font-size: calc(clamp(0.8rem, 4vw, 1.5rem) + 5pt + 0.5rem);
   z-index: 1000;
   background: center/contain no-repeat url('/play9/static/cards/p9front.svg');
   background-color: var(--white);
   border: 1px solid var(--sand);
 }
+
+.player-view-drawn-card.face-up {
+  isolation: isolate;
+}
+
+.player-view-drawn-card.face-up::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: url('/play9/static/play9.webp') center/55% no-repeat;
+  opacity: 0.25;
+  pointer-events: none;
+  border-radius: 8px;
+}
+
 .player-view-drawn-card.face-down {
   background-image: url('/play9/static/play9.webp'), url('/play9/static/cards/p9back.svg');
   background-size: 50% auto, contain;
@@ -148,7 +169,7 @@ body.player-view-mode .player-view-top .pile-stack {
 }
 
 body.player-view-mode .player-view-top .pile-stack .pile-card {
-  font-size: calc(clamp(0.8rem, 4vw, 1.5rem) + 5pt);
+  font-size: calc(clamp(0.8rem, 4vw, 1.5rem) + 5pt + 0.5rem);
 }
 
 .discard-pile {
@@ -169,7 +190,7 @@ body.player-view-mode .player-view-top .pile-btn,
 body.player-view-mode .player-view-top .discard-pile {
   height: var(--player-card-height);
   width: var(--player-card-width);
-  font-size: calc(clamp(0.8rem, 4vw, 1.5rem) + 5pt);
+  font-size: calc(clamp(0.8rem, 4vw, 1.5rem) + 5pt + 0.5rem);
 }
 
 .player-view.round-complete .player-view-top {
@@ -219,7 +240,7 @@ body.player-view-mode .player-view-bottom .card-grid .card {
   width: 100%;
   max-width: 100%;
   height: auto;
-  font-size: calc(clamp(0.8rem, 4vw, 1.5rem) + 5pt);
+  font-size: calc(clamp(0.8rem, 4vw, 1.5rem) + 5pt + 0.5rem);
   align-self: center;
   justify-self: center;
 }
