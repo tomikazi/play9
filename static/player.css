@@ -232,6 +232,14 @@ body.player-view-mode .player-view-bottom .card-grid .card {
 .waiting-room-dialog .waiting-room-dialog-card {
   min-width: 280px;
   max-width: 360px;
+  text-align: center;
+}
+
+.waiting-room-logo {
+  display: block;
+  margin: 0 auto 1rem;
+  max-width: 72px;
+  height: auto;
 }
 
 .waiting-room-leave-btn {

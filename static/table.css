@@ -49,6 +49,10 @@ body.table-view-mode .full-table-players {
   padding: min(clamp(0.5rem, 1.5vw, 2rem), clamp(0.5rem, 1.5vh, 1.5rem));
 }
 
+body.table-view-mode .full-table-slot {
+  min-height: 200px;
+}
+
 body.table-view-mode .full-table-center {
   gap: min(clamp(1.5rem, 4vw, 6rem), clamp(1.5rem, 4vh, 4rem));
 }
