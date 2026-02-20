@@ -1,8 +1,22 @@
 /* Play Nine — Player view only */
 
+html.player-view-mode,
 body.player-view-mode {
   overflow: hidden;
+  overscroll-behavior: none;
+  -webkit-overflow-scrolling: auto;
+}
+
+body.player-view-mode {
   height: 100vh;
+}
+
+body.player-view-mode.player-dragging {
+  touch-action: none;
+  position: fixed;
+  width: 100%;
+  top: var(--player-drag-fixed-top, 0);
+  left: 0;
 }
 
 body.player-view-mode .game-section {

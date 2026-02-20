@@ -202,6 +202,8 @@
         const dy = e.clientY - startY;
         if (Math.abs(dx) >= DRAG_THRESHOLD || Math.abs(dy) >= DRAG_THRESHOLD) {
           dragStarted = true;
+          document.body.classList.add('player-dragging');
+          document.documentElement.style.setProperty('--player-drag-fixed-top', window.scrollY + 'px');
           if (source === 'draw') sendAction({ type: 'draw_from_draw' });
           else if (source === 'discard') sendAction({ type: 'draw_from_discard' });
           ghost = createDragGhost(knownValue);
@@ -211,6 +213,14 @@
           ghost.style.top = (e.clientY - h) + 'px';
           dragState = { source, drawnFrom: source === 'draw' ? 'draw' : 'discard', cardValue: knownValue, ghost };
         }
+      };
+      const cleanup = function () {
+        document.body.classList.remove('player-dragging');
+        document.documentElement.style.removeProperty('--player-drag-fixed-top');
+        el.style.touchAction = '';
+        document.removeEventListener('pointermove', onMove);
+        document.removeEventListener('pointerup', onUp);
+        document.removeEventListener('pointercancel', onUp);
       };
       const onUp = function (e) {
         if (dragStarted && dragState) {
@@ -230,12 +240,11 @@
           dragState.ghost.remove();
           dragState = null;
         }
-        el.style.touchAction = '';
-        document.removeEventListener('pointermove', onMove);
-        document.removeEventListener('pointerup', onUp);
+        cleanup();
       };
       document.addEventListener('pointermove', onMove);
       document.addEventListener('pointerup', onUp);
+      document.addEventListener('pointercancel', onUp);
     });
   }
 
@@ -282,6 +291,8 @@
     tableLayout.innerHTML = '';
     playerLayout.innerHTML = '';
 
+    document.documentElement.classList.add('player-view-mode');
+    document.documentElement.classList.remove('table-view-mode');
     document.body.classList.add('player-view-mode');
     document.body.classList.remove('table-view-mode');
 
