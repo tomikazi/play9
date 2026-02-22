@@ -35,6 +35,7 @@
   let pingTimer = null;
   let inactiveTurnCountdown = null;
   let lastStateForInactive = null;
+  let lastStateForDrawAnimation = null;
   const RECONNECT_DELAY = 3000;
   const HEARTBEAT_INTERVAL = 5000;
 
@@ -97,6 +98,11 @@
 
   function applyState(state) {
     lastStateForInactive = state;
+    const hadDrawn = lastStateForDrawAnimation && lastStateForDrawAnimation.drawn_card;
+    const haveDrawn = state.drawn_card && state.drawn_from;
+    const animateDrawnFrom = (lastStateForDrawAnimation != null && !hadDrawn && haveDrawn) ? state.drawn_from : null;
+    lastStateForDrawAnimation = state;
+
     if (state.phase !== 'scoring') {
       const flyover = document.getElementById('score-flyover');
       if (flyover) flyover.hidden = true;
@@ -104,10 +110,10 @@
     updateInactiveTurnFlyover(state);
     gameSection.hidden = false;
     Play9.updateGameTitle(state);
-    renderGame(state);
+    renderGame(state, animateDrawnFrom);
   }
 
-  function renderGame(state) {
+  function renderGame(state, animateDrawnFrom) {
     const tableLayout = document.getElementById('table-layout');
     const playerLayout = document.getElementById('player-layout');
     tableLayout.innerHTML = '';
@@ -118,7 +124,7 @@
       Play9.showScoreFlyover(state, sendAction);
       return;
     }
-    Play9.renderTableView(state, tableLayout);
+    Play9.renderTableView(state, tableLayout, animateDrawnFrom ? { animateDrawnFrom: animateDrawnFrom } : undefined);
   }
 
   function connect() {

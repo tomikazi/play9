@@ -11,14 +11,6 @@ body.player-view-mode {
   height: 100vh;
 }
 
-body.player-view-mode.player-dragging {
-  touch-action: none;
-  position: fixed;
-  width: 100%;
-  top: var(--player-drag-fixed-top, 0);
-  left: 0;
-}
-
 body.player-view-mode .game-section {
   display: flex;
   flex-direction: column;
@@ -122,7 +114,7 @@ body.player-view-mode #player-layout {
 
 .player-view-piles {
   display: flex;
-  gap: 4rem;
+  gap: 7rem;
   align-items: center;
   justify-content: center;
   flex: 1;
@@ -267,6 +259,106 @@ body.player-view-mode .player-view-bottom .card-grid .card.face-up {
 }
 
 body.player-view-mode .player-view-bottom .card-grid .card.face-up::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: url('/play9/static/play9.webp') center/55% no-repeat;
+  opacity: 0.25;
+  pointer-events: none;
+  border-radius: 8px;
+}
+
+/* Card flip animation (vertical axis) */
+body.player-view-mode .player-view-bottom .card-grid .card-flip-wrapper {
+  position: relative;
+  aspect-ratio: 2/3;
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  align-self: center;
+  justify-self: center;
+  perspective: 1000px;
+}
+
+body.player-view-mode .player-view-bottom .card-grid .card-flip-wrapper.last-affected {
+  box-shadow: inset 0 0 0 2px var(--orange-dark);
+}
+
+.card-flip-inner {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+  transform: rotateY(0deg);
+}
+
+.card-flip-inner.card-flip-animate {
+  transition: transform 0.4s ease-out;
+  transform: rotateY(180deg);
+}
+
+.card-flip-wrapper .card-face {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  border: 1px solid var(--sand);
+  font-size: calc(clamp(0.8rem, 4vw, 1.5rem) + 5pt + 0.5rem);
+  font-weight: 600;
+  color: var(--brown);
+  font-family: "Times New Roman", Times, serif;
+}
+
+.card-flip-wrapper .card-face-back {
+  background-image: url('/play9/static/play9.webp'), url('/play9/static/cards/p9back.svg');
+  background-size: 50% auto, contain;
+  background-position: center, center;
+  background-repeat: no-repeat, no-repeat;
+  background-color: var(--green-light);
+  color: transparent;
+}
+
+.card-flip-wrapper .card-face-front {
+  background: center/contain no-repeat url('/play9/static/cards/p9front.svg');
+  background-color: var(--white);
+  transform: rotateY(180deg);
+  isolation: isolate;
+}
+
+.card-flip-wrapper .card-face-front::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: url('/play9/static/play9.webp') center/55% no-repeat;
+  opacity: 0.25;
+  pointer-events: none;
+  border-radius: 8px;
+}
+
+/* Replaced card flying to discard pile (always shown face-up) */
+.card-ghost-to-discard {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  border: 1px solid var(--sand);
+  background: center/contain no-repeat url('/play9/static/cards/p9front.svg');
+  background-color: var(--white);
+  font-size: calc(clamp(0.8rem, 4vw, 1.5rem) + 5pt + 0.5rem);
+  font-weight: 600;
+  color: var(--brown);
+  font-family: "Times New Roman", Times, serif;
+  isolation: isolate;
+  pointer-events: none;
+}
+
+.card-ghost-to-discard::before {
   content: '';
   position: absolute;
   inset: 0;

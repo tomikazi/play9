@@ -48,6 +48,9 @@
   }
 
   let lastStateForInactive = null;
+  let lastStateForDrawAnimation = null;
+  let animateDrawnFrom = null;
+  let justFlippedCardIndices = null;
 
   function updateInactiveTurnFlyover(state) {
     const flyover = document.getElementById('inactive-turn-flyover');
@@ -151,14 +154,103 @@
     }
   }
 
+  const DRAWN_CARD_ANIMATION_MS = 400;
+
+  function runDrawnCardFlyAnimation(wrapper, fromPile) {
+    const cardEl = wrapper.querySelector('.player-view-drawn-card');
+    const pileSelector = fromPile === 'discard' ? '.player-view-piles .discard-pile' : '.player-view-piles .draw-pile';
+    const pileEl = wrapper.querySelector(pileSelector);
+    if (!cardEl || !pileEl) return;
+    const pileRect = pileEl.getBoundingClientRect();
+    const cardRect = cardEl.getBoundingClientRect();
+    const dx = (pileRect.left + pileRect.width / 2) - (cardRect.left + cardRect.width / 2);
+    const dy = pileRect.top - cardRect.top;
+    const scaleX = pileRect.width / cardRect.width;
+    const scaleY = pileRect.height / cardRect.height;
+    cardEl.style.transformOrigin = 'top center';
+    cardEl.style.transition = 'none';
+    cardEl.style.transform = 'translate(calc(-50% + ' + dx + 'px), ' + dy + 'px) scale(' + scaleX + ', ' + scaleY + ')';
+    void cardEl.offsetHeight;
+    requestAnimationFrame(function () {
+      cardEl.style.transition = 'transform ' + DRAWN_CARD_ANIMATION_MS + 'ms ease-out';
+      cardEl.style.transform = 'translate(-50%, 0) scale(1.6)';
+    });
+  }
+
+  const DRAWN_CARD_TO_TARGET_MS = 400;
+  let drawnCardToTargetInProgress = false;
+
+  function runDrawnCardToTargetAnimation(wrapper, targetEl, onDone) {
+    const cardEl = wrapper.querySelector('.player-view-drawn-card');
+    if (!cardEl || !targetEl || drawnCardToTargetInProgress) return;
+    drawnCardToTargetInProgress = true;
+    const cardRect = cardEl.getBoundingClientRect();
+    const targetRect = targetEl.getBoundingClientRect();
+    const dx = (targetRect.left + targetRect.width / 2) - (cardRect.left + cardRect.width / 2);
+    const dy = targetRect.top - cardRect.top;
+    const scaleX = targetRect.width / cardRect.width;
+    const scaleY = targetRect.height / cardRect.height;
+    cardEl.style.transformOrigin = 'top center';
+    cardEl.style.transition = 'transform ' + DRAWN_CARD_TO_TARGET_MS + 'ms ease-out';
+    cardEl.style.transform = 'translate(calc(-50% + ' + dx + 'px), ' + dy + 'px) scale(' + scaleX + ', ' + scaleY + ')';
+    var completed = false;
+    function finish() {
+      if (completed) return;
+      completed = true;
+      drawnCardToTargetInProgress = false;
+      cardEl.removeEventListener('transitionend', finish);
+      clearTimeout(timeoutId);
+      onDone();
+    }
+    cardEl.addEventListener('transitionend', finish);
+    var timeoutId = setTimeout(finish, DRAWN_CARD_TO_TARGET_MS + 50);
+  }
+
+  function runReplacedCardToDiscardAnimation(wrapper, slotEl, card, onDone) {
+    const discardEl = wrapper.querySelector('.player-view-piles .discard-pile');
+    if (!discardEl || !slotEl) {
+      if (onDone) onDone();
+      return;
+    }
+    const slotRect = slotEl.getBoundingClientRect();
+    const discardRect = discardEl.getBoundingClientRect();
+    const ghost = document.createElement('div');
+    ghost.className = 'card-ghost-to-discard card face-up';
+    ghost.textContent = Play9.isCardValueKnown(card.value) ? String(card.value) : '';
+    ghost.style.position = 'fixed';
+    ghost.style.left = slotRect.left + 'px';
+    ghost.style.top = slotRect.top + 'px';
+    ghost.style.width = slotRect.width + 'px';
+    ghost.style.height = slotRect.height + 'px';
+    ghost.style.transition = 'left ' + DRAWN_CARD_TO_TARGET_MS + 'ms ease-out, top ' + DRAWN_CARD_TO_TARGET_MS + 'ms ease-out, width ' + DRAWN_CARD_TO_TARGET_MS + 'ms ease-out, height ' + DRAWN_CARD_TO_TARGET_MS + 'ms ease-out';
+    ghost.style.zIndex = '2000';
+    document.body.appendChild(ghost);
+    var completed = false;
+    function finish() {
+      if (completed) return;
+      completed = true;
+      ghost.removeEventListener('transitionend', finish);
+      clearTimeout(timeoutId);
+      if (ghost.parentNode) ghost.parentNode.removeChild(ghost);
+      if (onDone) onDone();
+    }
+    ghost.addEventListener('transitionend', finish);
+    var timeoutId = setTimeout(finish, DRAWN_CARD_TO_TARGET_MS + 50);
+    void ghost.offsetHeight;
+    requestAnimationFrame(function () {
+      ghost.style.left = discardRect.left + 'px';
+      ghost.style.top = discardRect.top + 'px';
+      ghost.style.width = discardRect.width + 'px';
+      ghost.style.height = discardRect.height + 'px';
+    });
+  }
+
   let ws = null;
   let reconnectTimer = null;
   let pingTimer = null;
-  let dragState = null;
   let inactiveTurnCountdown = null;
   const RECONNECT_DELAY = 3000;
   const HEARTBEAT_INTERVAL = 5000;
-  const DRAG_THRESHOLD = 5;
 
   function sendAction(action) {
     if (ws && ws.readyState === WebSocket.OPEN) {
@@ -170,85 +262,24 @@
     sendAction({ type: 'reveal', card_index: index });
   }
 
-  function createDragGhost(value) {
-    const ghost = document.createElement('div');
-    const isBack = value == null;
-    ghost.className = 'drag-ghost card ' + (isBack ? 'face-down' : 'face-up');
-    ghost.textContent = isBack ? '' : String(value);
-    ghost.style.cssText = 'position:fixed;pointer-events:none;z-index:9999;opacity:0.95;';
-    document.body.appendChild(ghost);
-    return ghost;
-  }
-
-  function setupDragSource(el, source, knownValue, state) {
-    el.addEventListener('pointerdown', function (e) {
-      if (e.button !== 0) return;
-      e.preventDefault();
-      el.style.touchAction = 'none';
-      const rect = el.getBoundingClientRect();
-      const startX = e.clientX;
-      const startY = e.clientY;
-      let dragStarted = false;
-      let ghost = null;
-      const w = rect.width;
-      const h = rect.height;
-      const onMove = function (e) {
-        if (dragStarted && dragState) {
-          dragState.ghost.style.left = (e.clientX - w / 2) + 'px';
-          dragState.ghost.style.top = (e.clientY - h) + 'px';
-          return;
-        }
-        const dx = e.clientX - startX;
-        const dy = e.clientY - startY;
-        if (Math.abs(dx) >= DRAG_THRESHOLD || Math.abs(dy) >= DRAG_THRESHOLD) {
-          dragStarted = true;
-          document.body.classList.add('player-dragging');
-          document.documentElement.style.setProperty('--player-drag-fixed-top', window.scrollY + 'px');
-          if (source === 'draw') sendAction({ type: 'draw_from_draw' });
-          else if (source === 'discard') sendAction({ type: 'draw_from_discard' });
-          ghost = createDragGhost(knownValue);
-          ghost.style.width = w + 'px';
-          ghost.style.height = h + 'px';
-          ghost.style.left = (e.clientX - w / 2) + 'px';
-          ghost.style.top = (e.clientY - h) + 'px';
-          dragState = { source, drawnFrom: source === 'draw' ? 'draw' : 'discard', cardValue: knownValue, ghost };
-        }
-      };
-      const cleanup = function () {
-        document.body.classList.remove('player-dragging');
-        document.documentElement.style.removeProperty('--player-drag-fixed-top');
-        el.style.touchAction = '';
-        document.removeEventListener('pointermove', onMove);
-        document.removeEventListener('pointerup', onUp);
-        document.removeEventListener('pointercancel', onUp);
-      };
-      const onUp = function (e) {
-        if (dragStarted && dragState) {
-          ghost.style.visibility = 'hidden';
-          const target = document.elementFromPoint(e.clientX, e.clientY);
-          ghost.style.visibility = '';
-          const dropEl = target?.closest('[data-drop-type]');
-          if (dropEl) {
-            const dropType = dropEl.dataset.dropType;
-            if (dropType === 'hand') {
-              sendAction({ type: 'play_replace', card_index: parseInt(dropEl.dataset.cardIndex, 10) });
-            } else if (dropType === 'discard') {
-              if (dragState.drawnFrom === 'draw') sendAction({ type: 'play_discard_only' });
-              else if (dragState.drawnFrom === 'discard') sendAction({ type: 'play_put_back' });
-            }
-          }
-          dragState.ghost.remove();
-          dragState = null;
-        }
-        cleanup();
-      };
-      document.addEventListener('pointermove', onMove);
-      document.addEventListener('pointerup', onUp);
-      document.addEventListener('pointercancel', onUp);
-    });
-  }
-
   function applyState(state) {
+    const hadDrawn = lastStateForDrawAnimation && lastStateForDrawAnimation.drawn_card;
+    const haveDrawn = state.drawn_card && state.drawn_from;
+    animateDrawnFrom = (lastStateForDrawAnimation != null && !hadDrawn && haveDrawn) ? state.drawn_from : null;
+    justFlippedCardIndices = [];
+    var hadDrawnCard = lastStateForDrawAnimation && lastStateForDrawAnimation.drawn_card;
+    var haveDrawnCard = !!state.drawn_card;
+    if (lastStateForDrawAnimation && state.players && !(hadDrawnCard && !haveDrawnCard)) {
+      var me = state.players.find(function (p) { return p.id === playerId; });
+      var prevMe = lastStateForDrawAnimation.players && lastStateForDrawAnimation.players.find(function (p) { return p.id === playerId; });
+      if (me && prevMe && me.hand && prevMe.hand && me.hand.length === 8 && prevMe.hand.length === 8) {
+        for (var fi = 0; fi < 8; fi++) {
+          if (!prevMe.hand[fi].face_up && me.hand[fi].face_up) justFlippedCardIndices.push(fi);
+        }
+      }
+    }
+    lastStateForDrawAnimation = state;
+
     if (state.phase !== 'scoring') {
       const flyover = document.getElementById('score-flyover');
       if (flyover) flyover.hidden = true;
@@ -268,19 +299,6 @@
       Play9.updateGameTitle(state);
       renderGame(state);
     }
-  }
-
-  function applyStateWithDragUpdate(state) {
-    if (dragState && state.drawn_card && dragState.source === 'draw') {
-      dragState.cardValue = state.drawn_card.value;
-      dragState.drawnFrom = state.drawn_from;
-      if (dragState.ghost) {
-        dragState.ghost.classList.remove('face-down');
-        dragState.ghost.classList.add('face-up');
-        dragState.ghost.textContent = Play9.isCardValueKnown(state.drawn_card.value) ? String(state.drawn_card.value) : '';
-      }
-    }
-    applyState(state);
   }
 
   function renderGame(state) {
@@ -313,7 +331,7 @@
 
       const wrapper = document.createElement('div');
       wrapper.className = 'player-view';
-      if (state.phase === 'play' && state.drawn_card && !isMyTurn) wrapper.classList.add('show-drawn-card');
+      if (state.phase === 'play' && state.drawn_card) wrapper.classList.add('show-drawn-card');
 
       const top = document.createElement('div');
       top.className = 'player-view-top';
@@ -326,16 +344,23 @@
         const discardHighlight = drawHighlight || (state.phase === 'play' && isMyTurn && hasDrawn);
         const drawClickable = state.phase === 'play' && isMyTurn && !hasDrawn && !state.must_flip_after_discard && (state.draw_pile_count ?? 0) > 0;
         const discardClickable = state.phase === 'play' && isMyTurn && !hasDrawn && !state.must_flip_after_discard && (state.discard_pile_count ?? 0) > 0;
-        const topDiscardValue = state.discard_pile_top?.[0];
 
         const drawPileEl = Play9.createStackedDrawPile(state.draw_pile_count ?? 0, { variant: 'player', highlight: drawHighlight, clickable: !!drawClickable });
-        const discardPileEl = Play9.createStackedDiscardPile(state.discard_pile_count ?? 0, state.discard_pile_top ?? [], { variant: 'player', highlight: discardHighlight, clickable: !!discardClickable });
-        if (discardHighlight && hasDrawn) discardPileEl.dataset.dropType = 'discard';
-        if (drawClickable) setupDragSource(drawPileEl, 'draw', null, state);
-        if (discardClickable) setupDragSource(discardPileEl, 'discard', topDiscardValue, state);
+        const discardPileEl = Play9.createStackedDiscardPile(state.discard_pile_count ?? 0, state.discard_pile_top ?? [], { variant: 'player', highlight: discardHighlight, clickable: !!discardClickable || (hasDrawn && isMyTurn) });
+        if (drawClickable) drawPileEl.addEventListener('click', () => sendAction({ type: 'draw_from_draw' }));
+        if (discardClickable) discardPileEl.addEventListener('click', () => sendAction({ type: 'draw_from_discard' }));
+        if (hasDrawn && isMyTurn) {
+          discardPileEl.classList.add('clickable');
+          discardPileEl.addEventListener('click', function () {
+            runDrawnCardToTargetAnimation(wrapper, discardPileEl, function () {
+              if (state.drawn_from === 'draw') sendAction({ type: 'play_discard_only' });
+              else if (state.drawn_from === 'discard') sendAction({ type: 'play_put_back' });
+            });
+          });
+        }
         piles.appendChild(drawPileEl);
         piles.appendChild(discardPileEl);
-        if (state.phase === 'play' && state.drawn_card && !isMyTurn) {
+        if (state.phase === 'play' && state.drawn_card) {
           const floatingCard = document.createElement('div');
           const known = Play9.isCardValueKnown(state.drawn_card.value);
           floatingCard.className = 'player-view-drawn-card card highlight ' + (known ? 'face-up' : 'face-down');
@@ -387,36 +412,74 @@
       bottom.className = 'player-view-bottom';
       const grid = document.createElement('div');
       grid.className = 'card-grid';
+      const flipIndices = justFlippedCardIndices || [];
+      justFlippedCardIndices = null;
       me.hand.forEach((card, i) => {
-        const el = document.createElement('div');
-        let cls = 'card' + (card.face_up ? ' face-up' : ' face-down');
-        if (Play9.isLastAffectedCard(state, me.id, i)) cls += ' last-affected';
-        el.className = cls;
-        el.textContent = card.face_up && Play9.isCardValueKnown(card.value) ? card.value : '';
-        if (state.phase === 'reveal') {
-          const canFlip = !card.face_up && me.revealed_count < 2;
-          if (canFlip) {
-            el.classList.add('clickable');
-            el.addEventListener('click', () => flipCard(i));
-          }
-        } else if (state.phase === 'play' && isMyTurn) {
-          if (state.must_flip_after_discard) {
-            if (!card.face_up) {
-              el.classList.add('clickable', 'highlight');
-              el.addEventListener('click', () => sendAction({ type: 'play_flip_after_discard', card_index: i }));
+        const isJustFlipped = card.face_up && flipIndices.indexOf(i) !== -1;
+        var el;
+        if (isJustFlipped) {
+          const flipWrapper = document.createElement('div');
+          flipWrapper.className = 'card-flip-wrapper';
+          const flipInner = document.createElement('div');
+          flipInner.className = 'card-flip-inner';
+          const backFace = document.createElement('div');
+          backFace.className = 'card-face card-face-back';
+          const frontFace = document.createElement('div');
+          frontFace.className = 'card-face card-face-front';
+          frontFace.textContent = Play9.isCardValueKnown(card.value) ? String(card.value) : '';
+          flipInner.appendChild(backFace);
+          flipInner.appendChild(frontFace);
+          flipWrapper.appendChild(flipInner);
+          if (Play9.isLastAffectedCard(state, me.id, i)) flipWrapper.classList.add('last-affected');
+          el = flipWrapper;
+          grid.appendChild(el);
+          flipInner.style.transition = 'none';
+          void flipInner.offsetHeight;
+          requestAnimationFrame(function () {
+            flipInner.style.transition = '';
+            flipInner.classList.add('card-flip-animate');
+          });
+        } else {
+          el = document.createElement('div');
+          let cls = 'card' + (card.face_up ? ' face-up' : ' face-down');
+          if (Play9.isLastAffectedCard(state, me.id, i)) cls += ' last-affected';
+          el.className = cls;
+          el.textContent = card.face_up && Play9.isCardValueKnown(card.value) ? card.value : '';
+          if (state.phase === 'reveal') {
+            const canFlip = !card.face_up && me.revealed_count < 2;
+            if (canFlip) {
+              el.classList.add('clickable');
+              el.addEventListener('click', () => flipCard(i));
             }
-          } else if (hasDrawn) {
-            el.classList.add('clickable', 'highlight');
-            el.dataset.dropType = 'hand';
-            el.dataset.cardIndex = String(i);
-            el.addEventListener('click', () => sendAction({ type: 'play_replace', card_index: i }));
+          } else if (state.phase === 'play' && isMyTurn) {
+            if (state.must_flip_after_discard) {
+              if (!card.face_up) {
+                el.classList.add('clickable', 'highlight');
+                el.addEventListener('click', () => sendAction({ type: 'play_flip_after_discard', card_index: i }));
+              }
+            } else if (hasDrawn) {
+              el.classList.add('clickable', 'highlight');
+              el.addEventListener('click', function () {
+                var pending = 2;
+                function bothDone() {
+                  pending--;
+                  if (pending === 0) sendAction({ type: 'play_replace', card_index: i });
+                }
+                runDrawnCardToTargetAnimation(wrapper, el, bothDone);
+                runReplacedCardToDiscardAnimation(wrapper, el, card, bothDone);
+              });
+            }
           }
+          grid.appendChild(el);
         }
-        grid.appendChild(el);
       });
       bottom.appendChild(grid);
       wrapper.appendChild(bottom);
       playerLayout.appendChild(wrapper);
+      if (state.phase === 'play' && state.drawn_card && animateDrawnFrom) {
+        runDrawnCardFlyAnimation(wrapper, animateDrawnFrom);
+        animateDrawnFrom = null;
+      }
       requestAnimationFrame(() => requestAnimationFrame(syncCardSizeFromSpread));
     } else {
       const msg = document.createElement('p');
@@ -457,7 +520,7 @@
           if (waitingRoomDialog && !waitingRoomDialog.hidden && startBtn) startBtn.disabled = false;
           return;
         }
-        applyStateWithDragUpdate(data);
+        applyState(data);
       } catch (e) {
         console.error('Invalid WS message:', e);
       }
@@ -567,5 +630,5 @@
   });
 
   connect();
-  fetch(`/play9/api/table/${tableName}`).then(r => r.json()).then(applyStateWithDragUpdate);
+  fetch(`/play9/api/table/${tableName}`).then(r => r.json()).then(applyState);
 })();

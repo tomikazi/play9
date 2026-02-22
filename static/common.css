@@ -154,42 +154,6 @@ body {
 .card.highlight, .card.face-down.highlight { box-shadow: 0 0 16px 4px var(--underglow), 0 0 32px 8px var(--underglow); }
 .card.last-affected { box-shadow: inset 0 0 0 2px var(--orange-dark); }
 
-.drag-ghost.card {
-  font-family: "Times New Roman", Times, serif;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.25);
-  transform: rotate(-2deg) scale(2);
-  transform-origin: center center;
-  color: var(--brown);
-}
-
-.drag-ghost.card.face-up {
-  position: relative;
-  isolation: isolate;
-}
-
-.drag-ghost.card.face-up::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  background: url('/play9/static/play9.webp') center/55% no-repeat;
-  opacity: 0.25;
-  pointer-events: none;
-  border-radius: 8px;
-}
-
-.drag-ghost.card.face-down {
-  background-image: url('/play9/static/play9.webp'), url('/play9/static/cards/p9back.svg');
-  background-size: 50% auto, contain;
-  background-position: center, center;
-  background-repeat: no-repeat, no-repeat;
-  background-color: var(--green-light);
-  color: transparent;
-}
-
-.draggable-source { cursor: grab; }
-.draggable-source:active { cursor: grabbing; }
-
 .pile-stack {
   position: relative;
   display: block;

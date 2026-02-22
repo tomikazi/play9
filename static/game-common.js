@@ -60,7 +60,7 @@ window.Play9 = (function () {
     container.className = 'pile-stack draw-pile' + (opts.variant === 'table' ? ' full-table-pile draw' : ' pile-btn');
     container.title = n ? `${n} cards` : '';
     if (opts.highlight) container.classList.add('highlight');
-    if (opts.clickable) container.classList.add('clickable', 'draggable-source');
+    if (opts.clickable) container.classList.add('clickable');
     const visibleCount = Math.min(n, PILE_STACK_VISIBLE_DRAW);
     for (let i = 0; i < visibleCount; i++) {
       const el = document.createElement('div');
@@ -88,7 +88,7 @@ window.Play9 = (function () {
     container.className = 'pile-stack discard-pile' + (opts.variant === 'table' ? ' full-table-pile discard' : '');
     container.title = 'Discard';
     if (opts.highlight) container.classList.add('highlight');
-    if (opts.clickable) container.classList.add('clickable', 'draggable-source');
+    if (opts.clickable) container.classList.add('clickable');
     const visibleCount = Math.min(n, PILE_STACK_VISIBLE);
     for (let i = 0; i < visibleCount; i++) {
       const el = document.createElement('div');
@@ -127,7 +127,31 @@ window.Play9 = (function () {
     return lac && lac[0] === pid && lac[1] === cardIndex;
   }
 
-  function renderTableView(state, container) {
+  const DRAWN_CARD_ANIMATION_MS = 400;
+
+  function runTableDrawnCardFlyAnimation(wrapper, fromPile) {
+    const cardEl = wrapper.querySelector('.full-table-drawn-card');
+    const pileSelector = fromPile === 'discard' ? '.full-table-center .discard-pile' : '.full-table-center .draw-pile';
+    const pileEl = wrapper.querySelector(pileSelector);
+    if (!cardEl || !pileEl) return;
+    const pileRect = pileEl.getBoundingClientRect();
+    const cardRect = cardEl.getBoundingClientRect();
+    const dx = (pileRect.left + pileRect.width / 2) - (cardRect.left + cardRect.width / 2);
+    const dy = pileRect.top - cardRect.top;
+    const scaleX = pileRect.width / cardRect.width;
+    const scaleY = pileRect.height / cardRect.height;
+    cardEl.style.transformOrigin = 'top center';
+    cardEl.style.transition = 'none';
+    cardEl.style.transform = 'translate(calc(-50% + ' + dx + 'px), ' + dy + 'px) scale(' + scaleX + ', ' + scaleY + ')';
+    void cardEl.offsetHeight;
+    requestAnimationFrame(function () {
+      cardEl.style.transition = 'transform ' + DRAWN_CARD_ANIMATION_MS + 'ms ease-out';
+      cardEl.style.transform = 'translate(-50%, 0) scale(1.6)';
+    });
+  }
+
+  function renderTableView(state, container, opts) {
+    opts = opts || {};
     const turnIdx = state.current_player_idx;
     const wrapper = document.createElement('div');
     wrapper.className = 'full-table';
@@ -173,6 +197,9 @@ window.Play9 = (function () {
     surface.appendChild(playersWrap);
     wrapper.appendChild(surface);
     container.appendChild(wrapper);
+    if (state.phase === 'play' && state.drawn_card && opts.animateDrawnFrom) {
+      runTableDrawnCardFlyAnimation(wrapper, opts.animateDrawnFrom);
+    }
   }
 
   function renderRoundComplete(state, tableLayout, playerLayout, me, playerId, sendAction, syncCardSize) {
