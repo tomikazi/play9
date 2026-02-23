@@ -283,6 +283,8 @@
     if (state.phase !== 'scoring') {
       const flyover = document.getElementById('score-flyover');
       if (flyover) flyover.hidden = true;
+      const historyFlyover = document.getElementById('score-history-flyover');
+      if (historyFlyover) historyFlyover.hidden = true;
     }
     updateWaitingDialog(state.players || [], state.active_player_ids || []);
     updateRestartVoteDialog(state);

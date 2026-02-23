@@ -98,22 +98,71 @@
 
   function applyState(state) {
     lastStateForInactive = state;
-    const hadDrawn = lastStateForDrawAnimation && lastStateForDrawAnimation.drawn_card;
+    const prev = lastStateForDrawAnimation;
+    const hadDrawn = prev && prev.drawn_card;
     const haveDrawn = state.drawn_card && state.drawn_from;
-    const animateDrawnFrom = (lastStateForDrawAnimation != null && !hadDrawn && haveDrawn) ? state.drawn_from : null;
+    const animateDrawnFrom = (prev != null && !hadDrawn && haveDrawn) ? state.drawn_from : null;
+
+    var justFlippedByPlayer = {};
+    var animateDrawnCardDrop = null;
+    var animateReplacedCardToDiscard = null;
+    var hadDrawnCard = hadDrawn;
+    var haveDrawnCard = !!state.drawn_card;
+    if (prev && state.players && !(hadDrawnCard && !haveDrawnCard)) {
+      state.players.forEach(function (p, pi) {
+        var prevP = prev.players && prev.players[pi];
+        if (!prevP || !p.hand || !prevP.hand || p.hand.length !== 8 || prevP.hand.length !== 8) return;
+        var indices = [];
+        for (var fi = 0; fi < 8; fi++) {
+          if (!prevP.hand[fi].face_up && p.hand[fi].face_up) indices.push(fi);
+        }
+        if (indices.length) justFlippedByPlayer[pi] = indices;
+      });
+    }
+    if (hadDrawnCard && !haveDrawnCard && state.phase === 'play' && prev && prev.phase === 'play') {
+      var prevTurn = prev.current_player_idx;
+      if (prevTurn != null) {
+        var currHand = state.players[prevTurn] && state.players[prevTurn].hand;
+        var prevHand = prev.players[prevTurn] && prev.players[prevTurn].hand;
+        var drawnCard = prev.drawn_card;
+        if (currHand && prevHand && drawnCard && currHand.length === 8 && prevHand.length === 8) {
+          var replaceSlot = -1;
+          for (var si = 0; si < 8; si++) {
+            if (prevHand[si].face_up !== currHand[si].face_up || (prevHand[si].value !== currHand[si].value)) {
+              replaceSlot = si;
+              break;
+            }
+          }
+          if (replaceSlot >= 0) {
+            animateDrawnCardDrop = { to: 'slot', playerIdx: prevTurn, slotIndex: replaceSlot, drawnCard: drawnCard };
+            animateReplacedCardToDiscard = { playerIdx: prevTurn, slotIndex: replaceSlot, card: prevHand[replaceSlot] };
+          } else {
+            animateDrawnCardDrop = { to: 'discard', drawnCard: drawnCard };
+          }
+        }
+      }
+    }
+
     lastStateForDrawAnimation = state;
 
     if (state.phase !== 'scoring') {
       const flyover = document.getElementById('score-flyover');
       if (flyover) flyover.hidden = true;
+      const historyFlyover = document.getElementById('score-history-flyover');
+      if (historyFlyover) historyFlyover.hidden = true;
     }
     updateInactiveTurnFlyover(state);
     gameSection.hidden = false;
     Play9.updateGameTitle(state);
-    renderGame(state, animateDrawnFrom);
+    var opts = { animateDrawnFrom: animateDrawnFrom };
+    if (Object.keys(justFlippedByPlayer).length) opts.justFlippedByPlayer = justFlippedByPlayer;
+    if (animateDrawnCardDrop) opts.animateDrawnCardDrop = animateDrawnCardDrop;
+    if (animateReplacedCardToDiscard) opts.animateReplacedCardToDiscard = animateReplacedCardToDiscard;
+    renderGame(state, opts);
   }
 
-  function renderGame(state, animateDrawnFrom) {
+  function renderGame(state, opts) {
+    opts = opts || {};
     const tableLayout = document.getElementById('table-layout');
     const playerLayout = document.getElementById('player-layout');
     tableLayout.innerHTML = '';
@@ -124,7 +173,7 @@
       Play9.showScoreFlyover(state, sendAction);
       return;
     }
-    Play9.renderTableView(state, tableLayout, animateDrawnFrom ? { animateDrawnFrom: animateDrawnFrom } : undefined);
+    Play9.renderTableView(state, tableLayout, opts);
   }
 
   function connect() {

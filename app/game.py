@@ -80,6 +80,7 @@ class TableState:
     hole_ended_by: Optional[int] = None  # player idx who triggered hole end
     final_turns_remaining: list[int] = field(default_factory=list)
     round_scores: dict[str, int] = field(default_factory=dict)  # this round's scores
+    score_history: list[dict] = field(default_factory=list)  # [{round: n, scores: {pid: score}}, ...]
     last_affected_card: Optional[tuple[str, int]] = None  # (player_id, card_index) for highlight
 
     DATA_DIR = Path("/play9")
@@ -133,6 +134,8 @@ class TableState:
             d["final_turns_remaining"] = self.final_turns_remaining
         if self.round_scores:
             d["round_scores"] = self.round_scores
+        if self.score_history:
+            d["score_history"] = self.score_history
         if self.last_affected_card:
             d["last_affected_card"] = list(self.last_affected_card)
         return d
@@ -181,6 +184,8 @@ class TableState:
             d["final_turns_remaining"] = self.final_turns_remaining
         if self.round_scores:
             d["round_scores"] = self.round_scores
+        if self.score_history:
+            d["score_history"] = self.score_history
         if self.last_affected_card:
             d["last_affected_card"] = list(self.last_affected_card)
         return d
@@ -216,6 +221,7 @@ class TableState:
             hole_ended_by=d.get("hole_ended_by"),
             final_turns_remaining=d.get("final_turns_remaining", []),
             round_scores=d.get("round_scores", {}),
+            score_history=d.get("score_history", []),
             last_affected_card=tuple(lac) if lac and len(lac) == 2 else None,
         )
 
@@ -246,6 +252,7 @@ def reset_table_to_empty(table: TableState) -> None:
     table.final_turns_remaining = []
     table.scores = {}
     table.round_scores = {}
+    table.score_history = []
     table.last_affected_card = None
 
 
@@ -264,6 +271,7 @@ def restart_game(table: TableState) -> Optional[str]:
         return "Need at least 2 players"
     table.scores = {}
     table.round_scores = {}
+    table.score_history = []
     return _deal_new_round(table, round_num=1)
 
 
@@ -357,11 +365,14 @@ def advance_from_scoring(table: TableState) -> Optional[str]:
     """After scoring phase: start next round or end game."""
     if table.phase != "scoring":
         return "Not in scoring phase"
+    # Save current round scores to history before clearing
+    table.score_history.append({"round": table.round_num, "scores": dict(table.round_scores)})
     if table.round_num >= 9:
         table.phase = "waiting"
         table.round_num = 0
         table.round_scores = {}
         table.scores = {}
+        table.score_history = []
         for p in table.players:
             p.hand = []
             p.revealed_count = 0

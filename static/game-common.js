@@ -173,6 +173,7 @@ window.Play9 = (function () {
     surface.appendChild(center);
     const playersWrap = document.createElement('div');
     playersWrap.className = 'full-table-players players-' + (state.players?.length || 0);
+    const justFlipped = opts.justFlippedByPlayer || {};
     (state.players || []).forEach((p, i) => {
       const slot = document.createElement('div');
       const pos = slotPositionForPlayer(state.players.length, i);
@@ -184,12 +185,36 @@ window.Play9 = (function () {
       const grid = document.createElement('div');
       grid.className = 'full-table-card-grid';
       (p.hand || []).forEach((card, ci) => {
-        const c = document.createElement('div');
-        let cls = 'card' + (card.face_up ? ' face-up' : ' face-down');
-        if (isLastAffectedCard(state, p.id, ci)) cls += ' last-affected';
-        c.className = cls;
-        c.textContent = card.face_up && isCardValueKnown(card.value) ? card.value : '';
-        grid.appendChild(c);
+        const isJustFlipped = card.face_up && justFlipped[i] && justFlipped[i].indexOf(ci) !== -1;
+        if (isJustFlipped) {
+          const flipWrapper = document.createElement('div');
+          flipWrapper.className = 'full-table-card-flip-wrapper';
+          const flipInner = document.createElement('div');
+          flipInner.className = 'full-table-card-flip-inner';
+          const backFace = document.createElement('div');
+          backFace.className = 'full-table-card-face full-table-card-face-back';
+          const frontFace = document.createElement('div');
+          frontFace.className = 'full-table-card-face full-table-card-face-front';
+          frontFace.textContent = isCardValueKnown(card.value) ? String(card.value) : '';
+          flipInner.appendChild(backFace);
+          flipInner.appendChild(frontFace);
+          flipWrapper.appendChild(flipInner);
+          if (isLastAffectedCard(state, p.id, ci)) flipWrapper.classList.add('last-affected');
+          grid.appendChild(flipWrapper);
+          flipInner.style.transition = 'none';
+          void flipInner.offsetHeight;
+          requestAnimationFrame(function () {
+            flipInner.style.transition = '';
+            flipInner.classList.add('full-table-card-flip-animate');
+          });
+        } else {
+          const c = document.createElement('div');
+          let cls = 'card' + (card.face_up ? ' face-up' : ' face-down');
+          if (isLastAffectedCard(state, p.id, ci)) cls += ' last-affected';
+          c.className = cls;
+          c.textContent = card.face_up && isCardValueKnown(card.value) ? card.value : '';
+          grid.appendChild(c);
+        }
       });
       slot.appendChild(grid);
       playersWrap.appendChild(slot);
@@ -200,6 +225,104 @@ window.Play9 = (function () {
     if (state.phase === 'play' && state.drawn_card && opts.animateDrawnFrom) {
       runTableDrawnCardFlyAnimation(wrapper, opts.animateDrawnFrom);
     }
+    if (opts.animateDrawnCardDrop) {
+      runTableDrawnCardDropAnimation(wrapper, opts.animateDrawnCardDrop);
+    }
+    if (opts.animateReplacedCardToDiscard) {
+      runTableReplacedCardToDiscardAnimation(wrapper, opts.animateReplacedCardToDiscard);
+    }
+  }
+
+  const TABLE_DROP_ANIMATION_MS = 400;
+
+  function runTableDrawnCardDropAnimation(wrapper, spec) {
+    const center = wrapper.querySelector('.full-table-center');
+    const discardEl = wrapper.querySelector('.full-table-center .discard-pile');
+    if (!center || !discardEl) return;
+    var toRect;
+    if (spec.to === 'slot') {
+      const slot = wrapper.querySelectorAll('.full-table-slot')[spec.playerIdx];
+      const grid = slot && slot.querySelector('.full-table-card-grid');
+      const cardEl = grid && grid.children[spec.slotIndex];
+      if (!cardEl) return;
+      toRect = cardEl.getBoundingClientRect();
+    } else {
+      toRect = discardEl.getBoundingClientRect();
+    }
+    var fromPlaceholder = document.createElement('div');
+    fromPlaceholder.className = 'full-table-drawn-card card face-up';
+    fromPlaceholder.style.visibility = 'hidden';
+    fromPlaceholder.style.pointerEvents = 'none';
+    center.appendChild(fromPlaceholder);
+    var fromRect = fromPlaceholder.getBoundingClientRect();
+    fromPlaceholder.parentNode.removeChild(fromPlaceholder);
+    var ghost = document.createElement('div');
+    ghost.className = 'card-ghost-to-discard card face-up';
+    var known = isCardValueKnown(spec.drawnCard && spec.drawnCard.value);
+    ghost.textContent = known ? String(spec.drawnCard.value) : '';
+    ghost.style.position = 'fixed';
+    ghost.style.left = fromRect.left + 'px';
+    ghost.style.top = fromRect.top + 'px';
+    ghost.style.width = fromRect.width + 'px';
+    ghost.style.height = fromRect.height + 'px';
+    ghost.style.transition = 'left ' + TABLE_DROP_ANIMATION_MS + 'ms ease-out, top ' + TABLE_DROP_ANIMATION_MS + 'ms ease-out, width ' + TABLE_DROP_ANIMATION_MS + 'ms ease-out, height ' + TABLE_DROP_ANIMATION_MS + 'ms ease-out';
+    ghost.style.zIndex = '2000';
+    document.body.appendChild(ghost);
+    var completed = false;
+    function finish() {
+      if (completed) return;
+      completed = true;
+      ghost.removeEventListener('transitionend', finish);
+      clearTimeout(tid);
+      if (ghost.parentNode) ghost.parentNode.removeChild(ghost);
+    }
+    ghost.addEventListener('transitionend', finish);
+    var tid = setTimeout(finish, TABLE_DROP_ANIMATION_MS + 50);
+    void ghost.offsetHeight;
+    requestAnimationFrame(function () {
+      ghost.style.left = toRect.left + 'px';
+      ghost.style.top = toRect.top + 'px';
+      ghost.style.width = toRect.width + 'px';
+      ghost.style.height = toRect.height + 'px';
+    });
+  }
+
+  function runTableReplacedCardToDiscardAnimation(wrapper, spec) {
+    const discardEl = wrapper.querySelector('.full-table-center .discard-pile');
+    const slot = wrapper.querySelectorAll('.full-table-slot')[spec.playerIdx];
+    const grid = slot && slot.querySelector('.full-table-card-grid');
+    const cardEl = grid && grid.children[spec.slotIndex];
+    if (!discardEl || !cardEl) return;
+    const fromRect = cardEl.getBoundingClientRect();
+    const toRect = discardEl.getBoundingClientRect();
+    var ghost = document.createElement('div');
+    ghost.className = 'card-ghost-to-discard card face-up';
+    ghost.textContent = isCardValueKnown(spec.card && spec.card.value) ? String(spec.card.value) : '';
+    ghost.style.position = 'fixed';
+    ghost.style.left = fromRect.left + 'px';
+    ghost.style.top = fromRect.top + 'px';
+    ghost.style.width = fromRect.width + 'px';
+    ghost.style.height = fromRect.height + 'px';
+    ghost.style.transition = 'left ' + TABLE_DROP_ANIMATION_MS + 'ms ease-out, top ' + TABLE_DROP_ANIMATION_MS + 'ms ease-out, width ' + TABLE_DROP_ANIMATION_MS + 'ms ease-out, height ' + TABLE_DROP_ANIMATION_MS + 'ms ease-out';
+    ghost.style.zIndex = '2000';
+    document.body.appendChild(ghost);
+    var completed = false;
+    function finish() {
+      if (completed) return;
+      completed = true;
+      ghost.removeEventListener('transitionend', finish);
+      clearTimeout(tid);
+      if (ghost.parentNode) ghost.parentNode.removeChild(ghost);
+    }
+    ghost.addEventListener('transitionend', finish);
+    var tid = setTimeout(finish, TABLE_DROP_ANIMATION_MS + 50);
+    void ghost.offsetHeight;
+    requestAnimationFrame(function () {
+      ghost.style.left = toRect.left + 'px';
+      ghost.style.top = toRect.top + 'px';
+      ghost.style.width = toRect.width + 'px';
+      ghost.style.height = toRect.height + 'px';
+    });
   }
 
   function renderRoundComplete(state, tableLayout, playerLayout, me, playerId, sendAction, syncCardSize) {
@@ -278,6 +401,74 @@ window.Play9 = (function () {
 
   let lastScoreFlyoverKey = null;
 
+  function showScoreHistoryFlyover(state) {
+    const flyover = document.getElementById('score-history-flyover');
+    if (!flyover) return;
+    flyover.innerHTML = '';
+    const players = state.players || [];
+    const scoreHistory = state.score_history || [];
+    const roundScores = state.round_scores || {};
+    const totals = state.scores || {};
+
+    const table = document.createElement('table');
+    table.className = 'score-history-table';
+    const thead = document.createElement('thead');
+    const headerRow = document.createElement('tr');
+    const roundTh = document.createElement('th');
+    roundTh.textContent = '';
+    roundTh.className = 'score-history-round-col';
+    headerRow.appendChild(roundTh);
+    players.forEach(p => {
+      const th = document.createElement('th');
+      th.textContent = escapeHtml(p.name);
+      th.className = 'score-history-player-col';
+      headerRow.appendChild(th);
+    });
+    thead.appendChild(headerRow);
+    table.appendChild(thead);
+
+    const tbody = document.createElement('tbody');
+    const allRounds = scoreHistory.concat([{ round: state.round_num, scores: roundScores }]);
+    allRounds.forEach(entry => {
+      const tr = document.createElement('tr');
+      const roundTd = document.createElement('td');
+      roundTd.textContent = 'Round ' + entry.round;
+      roundTd.className = 'score-history-round-col';
+      tr.appendChild(roundTd);
+      players.forEach(p => {
+        const td = document.createElement('td');
+        td.textContent = String(entry.scores?.[p.id] ?? '—');
+        td.className = 'score-history-player-col';
+        tr.appendChild(td);
+      });
+      tbody.appendChild(tr);
+    });
+
+    const totalRow = document.createElement('tr');
+    totalRow.className = 'score-history-total-row';
+    const totalLabel = document.createElement('td');
+    totalLabel.textContent = 'Total';
+    totalLabel.className = 'score-history-round-col';
+    totalRow.appendChild(totalLabel);
+    players.forEach(p => {
+      const td = document.createElement('td');
+      td.textContent = String(totals[p.id] ?? '—');
+      td.className = 'score-history-player-col';
+      totalRow.appendChild(td);
+    });
+    tbody.appendChild(totalRow);
+    table.appendChild(tbody);
+
+    const closeBtn = document.createElement('button');
+    closeBtn.className = 'score-history-close-btn';
+    closeBtn.textContent = 'Close';
+    closeBtn.addEventListener('click', () => { flyover.hidden = true; });
+
+    flyover.appendChild(table);
+    flyover.appendChild(closeBtn);
+    flyover.hidden = false;
+  }
+
   function showScoreFlyover(state, sendAction) {
     const flyover = document.getElementById('score-flyover');
     if (!flyover) return;
@@ -288,10 +479,23 @@ window.Play9 = (function () {
     }
     lastScoreFlyoverKey = key;
     flyover.innerHTML = '';
+
+    const header = document.createElement('div');
+    header.className = 'score-flyover-header';
     const logo = document.createElement('img');
     logo.src = '/play9/static/play9.webp';
     logo.alt = '';
     logo.className = 'score-flyover-logo';
+    const trophyBtn = document.createElement('button');
+    trophyBtn.className = 'score-trophy-btn icon-btn';
+    trophyBtn.title = 'Scores by round';
+    trophyBtn.setAttribute('aria-label', 'Scores by round');
+    trophyBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>';
+    trophyBtn.addEventListener('click', () => showScoreHistoryFlyover(state));
+    header.appendChild(logo);
+    header.appendChild(trophyBtn);
+    flyover.appendChild(header);
+
     const title = document.createElement('h3');
     title.textContent = state.round_num >= 9 ? 'Game Over' : `Round ${state.round_num} complete`;
     const scores = (state.players || [])
@@ -310,7 +514,6 @@ window.Play9 = (function () {
     nextBtn.className = 'next-round-btn';
     nextBtn.textContent = state.round_num >= 9 ? 'Back to Lobby' : 'Next Round';
     nextBtn.addEventListener('click', () => sendAction({ type: 'advance_scoring' }));
-    flyover.appendChild(logo);
     flyover.appendChild(title);
     flyover.appendChild(table);
     flyover.appendChild(nextBtn);
@@ -324,6 +527,8 @@ window.Play9 = (function () {
       el.textContent = 'Waiting for Players';
     } else if (state.phase === 'waiting') {
       el.textContent = '';
+    } else if (state.phase === 'scoring') {
+      el.textContent = state.round_num >= 9 ? 'Game Over' : `Round ${state.round_num} Done`;
     } else {
       el.textContent = state.round_num >= 9 ? 'Game Over' : `Round ${state.round_num}`;
     }
