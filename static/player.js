@@ -404,8 +404,8 @@
         }
       } else if (state.phase === 'reveal') {
         const m = document.createElement('p');
-        m.className = 'center-instruction';
-        m.textContent = 'Reveal 2 of your cards';
+        m.className = me.revealed_count >= 2 ? 'center-instruction center-instruction-wait' : 'center-instruction';
+        m.textContent = me.revealed_count >= 2 ? 'Waiting for others…' : 'Reveal 2 of your cards';
         center.appendChild(m);
       }
       wrapper.appendChild(center);

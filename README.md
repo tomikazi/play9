@@ -107,3 +107,7 @@ Hole-in-Ones: -5 each; multiples add up with bonuses. Lowest hole score recorded
 **Notes:**  
 - Each 54-card pack: 4× of 0-12 (52 cards) + 2× Hole-in-One.  
 - For 8 players: Use 3 packs (162 cards total: 12× of 0-12 + 6× Hole-in-One).
+
+## PWA and automatic updates
+
+The app runs as a PWA with a service worker. The **`build`** script passes a unique **`PLAY9_VERSION`** (Unix timestamp) into the image on each build, so every `./build` produces an image that will invalidate client caches and serve updated JS/CSS/assets. No need to set the version manually when running the container. The service worker is served with `Cache-Control: no-store`, so clients fetch it on each check and reload once when a new version is active.

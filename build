@@ -1,3 +1,4 @@
 #!/bin/bash
 
-docker build -t play9:local .
+# Unique version per build so PWA clients pick up new assets on deploy
+docker build --build-arg PLAY9_VERSION="$(date +%s)" -t play9:local .

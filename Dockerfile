@@ -2,6 +2,10 @@ FROM python:3.12-slim
 
 WORKDIR /app
 
+# Bump PWA version on each build so clients get fresh assets (set by build script or leave default)
+ARG PLAY9_VERSION=dev
+ENV PLAY9_VERSION=${PLAY9_VERSION}
+
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 

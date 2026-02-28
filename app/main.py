@@ -1,5 +1,6 @@
 import asyncio
 import json
+import os
 import time
 from pathlib import Path
 
@@ -465,6 +466,28 @@ async def get_table_state(table_name: str):
     state = table.to_public_dict() if table else _empty_table_state(tn)
     state = await manager.enrich_state_for_clients(tn, state)
     return _merge_restart_vote_state(tn, state)
+
+
+# Version for PWA cache invalidation (set PLAY9_VERSION on deploy)
+@app.get("/play9/api/version")
+async def api_version():
+    """Return app version so the service worker can invalidate caches on deploy."""
+    version = os.environ.get("PLAY9_VERSION", "1")
+    return {"version": version}
+
+
+# Serve service worker at /play9/sw.js with no-cache so updates are picked up on deploy
+@app.get("/play9/sw.js")
+async def service_worker():
+    """Serve the service worker script; never cache so clients get updates."""
+    path = STATIC_DIR / "sw.js"
+    if not path.exists():
+        raise HTTPException(status_code=404, detail="Not found")
+    return FileResponse(
+        path,
+        media_type="application/javascript",
+        headers={"Cache-Control": "no-store, no-cache, must-revalidate"},
+    )
 
 
 # Mount static assets (CSS, JS) under /play9/static
